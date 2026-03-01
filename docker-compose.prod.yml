@@ -1,0 +1,27 @@
+version: '3.8'
+
+# Production Docker Compose
+# Uses pre-built image instead of building locally
+
+services:
+  app:
+    image: ghcr.io/dhanyyudi/wilayah-id:latest
+    container_name: wilayah-id-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXT_PUBLIC_TILES_BASE_URL=${NEXT_PUBLIC_TILES_BASE_URL:-/tiles}
+    networks:
+      - wilayah-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/v1/regions/provinces"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  wilayah-network:
+    driver: bridge

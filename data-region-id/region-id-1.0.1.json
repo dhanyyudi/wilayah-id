@@ -1,0 +1,29 @@
+{
+  "dataset": "region-id",
+  "version": "1.0.1",
+  "tag": "v1.0.1",
+  "status": "stable",
+  "source": {
+    "name": "Kementerian Dalam Negeri Republik Indonesia",
+    "document": "Kepmendagri - Kode dan Data Wilayah Administrasi",
+    "document_hash": {
+      "algorithm": "sha256",
+      "value": "4a40e41cc2be515ca5b88df17a91e3f7ac6161ce7326a9fd38691753efa6b3fd"
+    }
+  },
+  "generated_at": "2026-01-12T14:47:41.436605+00:00",
+  "levels": [
+    "province",
+    "regency",
+    "district",
+    "village"
+  ],
+  "records": {
+    "provinces": 38,
+    "regencies": 514,
+    "districts": 7285,
+    "villages": 83762
+  },
+  "format": "csv",
+  "encoding": "utf-8"
+}

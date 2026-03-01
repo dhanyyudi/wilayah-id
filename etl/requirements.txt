@@ -1,0 +1,6 @@
+geopandas>=0.14.0
+psycopg2-binary
+sqlalchemy
+python-dotenv
+tqdm
+pyogrio

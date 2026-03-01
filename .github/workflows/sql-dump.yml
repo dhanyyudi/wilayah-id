@@ -1,0 +1,97 @@
+name: Generate SQL Dump
+
+on:
+  workflow_dispatch:  # Manual trigger
+  schedule:
+    # Run monthly on 1st day at 00:00 UTC
+    - cron: '0 0 1 * *'
+  push:
+    tags: [ 'data-v*' ]  # Trigger on data version tags
+
+env:
+  NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+
+jobs:
+  generate-dump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # For creating releases
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-15
+
+      - name: Generate timestamp
+        id: timestamp
+        run: echo "timestamp=$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Create SQL dump from Neon
+        run: |
+          echo "Creating database dump from Neon..."
+          
+          # Custom format (compressed, fastest restore)
+          pg_dump "${NEON_DATABASE_URL}" \
+            --format=custom \
+            --compress=9 \
+            --verbose \
+            --file=wilayah_id_${{ steps.timestamp.outputs.timestamp }}.dump
+          
+          # Plain SQL format (human readable, for debugging)
+          pg_dump "${NEON_DATABASE_URL}" \
+            --format=plain \
+            --compress=9 \
+            --file=wilayah_id_${{ steps.timestamp.outputs.timestamp }}.sql.gz
+          
+          # Show file sizes
+          ls -lh *.dump *.sql.gz
+
+      - name: Calculate checksums
+        run: |
+          sha256sum wilayah_id_${{ steps.timestamp.outputs.timestamp }}.dump > checksums.txt
+          sha256sum wilayah_id_${{ steps.timestamp.outputs.timestamp }}.sql.gz >> checksums.txt
+          cat checksums.txt
+
+      - name: Upload to GitHub Release
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            wilayah_id_*.dump
+            wilayah_id_*.sql.gz
+            checksums.txt
+          body: |
+            ## Database Dump ${{ steps.timestamp.outputs.timestamp }}
+            
+            Automated database dump from Neon PostgreSQL.
+            
+            ### Files
+            - `wilayah_id_{{ steps.timestamp.outputs.timestamp }}.dump` - Compressed custom format (recommended)
+            - `wilayah_id_{{ steps.timestamp.outputs.timestamp }}.sql.gz` - Plain SQL compressed
+            - `checksums.txt` - SHA256 checksums
+            
+            ### Usage
+            ```bash
+            # Download and restore
+            pg_restore -d your_db -j 4 wilayah_id_*.dump
+            ```
+            
+            ### Data Statistics
+            - Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+            - Source: Neon PostgreSQL (id-restapi)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts (for PR/testing)
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v3
+        with:
+          name: sql-dump-${{ steps.timestamp.outputs.timestamp }}
+          path: |
+            wilayah_id_*.dump
+            wilayah_id_*.sql.gz
+          retention-days: 7

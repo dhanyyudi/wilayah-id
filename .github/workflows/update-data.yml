@@ -1,0 +1,96 @@
+name: Update Data from Sources
+
+on:
+  workflow_dispatch:
+    inputs:
+      data_source:
+        description: 'Which data to update'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - regions
+          - postal_codes
+          - boundaries
+
+env:
+  NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r etl/requirements.txt
+
+      - name: Download latest source data
+        run: |
+          mkdir -p data-downloads
+          
+          # Download from official sources
+          echo "Downloading latest data..."
+          
+          # Region codes (GitHub)
+          curl -L -o data-downloads/region-id-latest.zip \
+            https://github.com/lokabisa-oss/region-id/archive/refs/heads/main.zip || true
+          
+          # Postal codes (GitHub)
+          curl -L -o data-downloads/postal-code-id-latest.zip \
+            https://github.com/lokabisa-oss/postal-code-id/archive/refs/heads/main.zip || true
+          
+          # Note: Boundaries (BIG) requires manual download due to size
+          echo "Note: Boundary SHP files must be downloaded manually from BIG"
+
+      - name: Run ETL - Region Codes
+        if: github.event.inputs.data_source == 'all' || github.event.inputs.data_source == 'regions'
+        run: |
+          echo "Updating region codes..."
+          python etl/update_regions.py || echo "Region update script not found, skipping"
+
+      - name: Run ETL - Postal Codes
+        if: github.event.inputs.data_source == 'all' || github.event.inputs.data_source == 'postal_codes'
+        run: |
+          echo "Updating postal codes..."
+          python etl/update_postal_codes.py || echo "Postal code update script not found, skipping"
+
+      - name: Generate update report
+        run: |
+          echo "## Data Update Report" > update-report.md
+          echo "- Date: $(date)" >> update-report.md
+          echo "- Trigger: ${{ github.event.inputs.data_source }}" >> update-report.md
+          echo "- Commit: ${{ github.sha }}" >> update-report.md
+          cat update-report.md
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update ${{ github.event.inputs.data_source }} data"
+          title: "Data Update: ${{ github.event.inputs.data_source }}"
+          body: |
+            Automated data update
+            
+            - Source: ${{ github.event.inputs.data_source }}
+            - Date: ${{ github.event.created_at }}
+            
+            Please review the changes before merging.
+          branch: data-update/${{ github.event.inputs.data_source }}-${{ github.run_id }}
+          delete-branch: true

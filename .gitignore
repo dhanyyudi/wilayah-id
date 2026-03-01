@@ -1,0 +1,128 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files
+.env
+.env*.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Python
+etl-venv/
+__pycache__/
+*.pyc
+*.pyo
+.eggs/
+*.egg-info/
+
+# Tiles (generated, large files)
+public/tiles/
+tiles-work/
+*.mbtiles
+*.geojson
+
+# Temp
+/tmp/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Generated data files (large files)
+*.mbtiles
+*.pbf
+*.geojsonl
+etl/output/
+etl/temp/
+
+# Logs
+logs/
+*.log
+
+# Local database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Cache
+.cache/
+*.cache
+
+# AI/Agent rules (internal)
+.agent/
+ai-rules/
+
+# Data folders (large raw files - CSVs under 10MB are kept in repo)
+# SHP files are large and should be downloaded separately
+data-batas-administrasi-shp/
+data-postal-codes/*.json
+data-postal-codes/*enriched*
+
+# ETL temporary files
+etl/temp/
+etl/output/
+etl/*.tmp
+
+# GitHub Actions local testing
+.actrc
+.secrets
+
+# Docker
+.dockerignore
+Dockerfile.local
+docker-compose.override.yml
+
+# Database dumps (generated files)
+*.dump
+*.sql.gz
+sql-dumps/
+
+# Lottie source files (we use compiled JSON)
+*.lottie
+*.aep
+
+CLAUDE.md

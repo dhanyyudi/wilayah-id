@@ -1,0 +1,39 @@
+code,name,capital
+11,Aceh,Banda Aceh
+12,Sumatera Utara,Medan
+13,Sumatera Barat,Padang
+14,Riau,Pekanbaru
+15,Jambi,Jambi
+16,Sumatera Selatan,Palembang
+17,Bengkulu,Bengkulu
+18,Lampung,Bandar Lampung
+19,Kepulauan Bangka Belitung,Pangkal Pinang
+21,Kepulauan Riau,Tanjung Pinang
+31,Daerah Khusus Ibukota Jakarta,Jakarta
+32,Jawa Barat,Bandung
+33,Jawa Tengah,Semarang
+34,Daerah Istimewa Yogyakarta,Yogyakarta
+35,Jawa Timur,Surabaya
+36,Banten,Serang
+51,Bali,Denpasar
+52,Nusa Tenggara Barat,Mataram
+53,Nusa Tenggara Timur,Kupang
+61,Kalimantan Barat,Pontianak
+62,Kalimantan Tengah,Palangkaraya
+63,Kalimantan Selatan,Banjarmasin
+64,Kalimantan Timur,Samarinda
+65,Kalimantan Utara,Tanjung Selor
+71,Sulawesi Utara,Manado
+72,Sulawesi Tengah,Palu
+73,Sulawesi Selatan,Makassar
+74,Sulawesi Tenggara,Kendari
+75,Gorontalo,Gorontalo
+76,Sulawesi Barat,Mamuju
+81,Maluku,Ambon
+82,Maluku Utara,Sofifi
+91,Papua,Jayapura
+92,Papua Barat,Manokwari
+93,Papua Selatan,Kabupaten Merauke
+94,Papua Tengah,Kabupaten Nabire
+95,Papua Pegunungan,Kabupaten Jayawijaya
+96,Papua Barat Daya,Kota Sorong
