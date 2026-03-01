@@ -35,7 +35,7 @@ export default function VectorLayerManager({ layerVisibility, onFeatureClick, hi
   // Keep ref in sync with prop
   visibilityRef.current = layerVisibility;
 
-  const tilesBaseUrl = typeof window !== "undefined" ? `${window.location.origin}/tiles` : "/tiles";
+  const tilesBaseUrl = process.env.NEXT_PUBLIC_TILES_BASE_URL || (typeof window !== "undefined" ? `${window.location.origin}/tiles` : "/tiles");
 
   // Add sources and layers once map is loaded / style changes
   useEffect(() => {
