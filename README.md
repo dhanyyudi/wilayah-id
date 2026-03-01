@@ -1,6 +1,6 @@
 # 🇮🇩 wilayah-id — API Batas Administrasi Indonesia
 
-REST API & Webmap interaktif untuk batas administrasi Indonesia: **38 provinsi, 514 kabupaten/kota, 7.266 kecamatan, 83.430 desa/kelurahan**.
+REST API & Webmap interaktif untuk batas administrasi Indonesia: **38 provinsi, 514 kabupaten/kota, 7.285 kecamatan, 83.762 desa/kelurahan**.
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![MapLibre GL](https://img.shields.io/badge/MapLibre_GL-v5-blue)
@@ -9,9 +9,10 @@ REST API & Webmap interaktif untuk batas administrasi Indonesia: **38 provinsi, 
 
 ## ✨ Features
 
-- **REST API** — 20 endpoints untuk query wilayah, kode pos, batas (GeoJSON), reverse geocode
+- **REST API** — 22 endpoints untuk query wilayah, kode pos, batas (GeoJSON), reverse geocode, OGC WMS/WFS
 - **Vector Tiles** — 4 layer MVT (.pbf) via Tippecanoe, served statik dari Vercel CDN
 - **Webmap Interaktif** — MapLibre GL JS v5 via [mapcn](https://mapcn.dev), dark/light mode
+- **OGC Compliant** — WMS 1.3.0 (GetCapabilities, GetMap, GetFeatureInfo) + WFS 2.0 (GetFeature, DescribeFeatureType)
 - **PostGIS** — Full geometry data (MultiPolygon) untuk semua level administrasi
 - **Open Source** — Data dari BIG via [batas-administrasi-indonesia](https://github.com/Alf-Anas/batas-administrasi-indonesia)
 
@@ -85,6 +86,17 @@ Base URL: `/api/v1`
 |--------|----------|-------------|
 | GET | `/boundaries/reverse?lat=&lng=&level=` | Koordinat → wilayah |
 
+### OGC Services
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/ogc/wms?SERVICE=WMS&REQUEST=GetCapabilities` | WMS 1.3.0 Capabilities XML |
+| GET | `/ogc/wms?SERVICE=WMS&REQUEST=GetMap&...` | Render tile raster |
+| GET | `/ogc/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&...` | Info fitur pada koordinat |
+| GET | `/ogc/wfs?SERVICE=WFS&REQUEST=GetCapabilities` | WFS 2.0 Capabilities XML |
+| GET | `/ogc/wfs?SERVICE=WFS&REQUEST=GetFeature&...` | Download fitur sebagai GeoJSON |
+| GET | `/ogc/wfs?SERVICE=WFS&REQUEST=DescribeFeatureType&...` | Deskripsi skema layer |
+
 ### Response Format
 
 ```json
@@ -106,19 +118,20 @@ Base URL: `/api/v1`
 |-------|-----------|----------|
 | `provinsi` | z3–9 | 38 |
 | `kabupaten` | z7–11 | 514 |
-| `kecamatan` | z10–12 | 7.266 |
-| `desa` | z12–14 | 83.430 |
+| `kecamatan` | z10–12 | 7.285 |
+| `desa` | z12–14 | 83.762 |
 
 ## 🛠️ Tech Stack
 
 | Component | Technology |
 |-----------|-----------|
-| Framework | Next.js 16 (App Router) |
+| Framework | Next.js 16.1.6 (App Router) |
 | Map Engine | MapLibre GL JS v5 |
 | Map UI | [mapcn](https://mapcn.dev) (shadcn/ui compatible) |
 | Database | PostgreSQL 17 + PostGIS 3.5 (Neon) |
+| OGC Services | WMS 1.3.0 + WFS 2.0 |
 | Tile Generation | Tippecanoe + mb-util |
-| ETL | Python 3.11 + GeoPandas |
+| ETL | Python + GeoPandas |
 | Styling | Tailwind CSS v4 + shadcn/ui |
 | Deployment | Vercel |
 
