@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write  # For creating releases
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -28,70 +28,76 @@ jobs:
 
       - name: Generate timestamp
         id: timestamp
-        run: echo "timestamp=$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
+        run: |
+          echo "timestamp=$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
+          echo "date=$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
 
       - name: Create SQL dump from Neon
         run: |
           echo "Creating database dump from Neon..."
-          
-          # Custom format (compressed, fastest restore)
+
+          # Custom format — standardized name for /releases/latest/download/
           pg_dump "${NEON_DATABASE_URL}" \
             --format=custom \
             --compress=9 \
             --verbose \
-            --file=wilayah_id_${{ steps.timestamp.outputs.timestamp }}.dump
-          
-          # Plain SQL format (human readable, for debugging)
+            --file=wilayah_id.dump
+
+          # Plain SQL format
           pg_dump "${NEON_DATABASE_URL}" \
             --format=plain \
             --compress=9 \
-            --file=wilayah_id_${{ steps.timestamp.outputs.timestamp }}.sql.gz
-          
+            --file=wilayah_id.sql.gz
+
           # Show file sizes
-          ls -lh *.dump *.sql.gz
+          ls -lh wilayah_id.dump wilayah_id.sql.gz
 
       - name: Calculate checksums
         run: |
-          sha256sum wilayah_id_${{ steps.timestamp.outputs.timestamp }}.dump > checksums.txt
-          sha256sum wilayah_id_${{ steps.timestamp.outputs.timestamp }}.sql.gz >> checksums.txt
+          sha256sum wilayah_id.dump > checksums.txt
+          sha256sum wilayah_id.sql.gz >> checksums.txt
           cat checksums.txt
 
       - name: Upload to GitHub Release
         if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: data-${{ steps.timestamp.outputs.timestamp }}
+          name: "Database Dump — ${{ steps.timestamp.outputs.date }}"
           files: |
-            wilayah_id_*.dump
-            wilayah_id_*.sql.gz
+            wilayah_id.dump
+            wilayah_id.sql.gz
             checksums.txt
           body: |
-            ## Database Dump ${{ steps.timestamp.outputs.timestamp }}
-            
+            ## Database Dump
+
             Automated database dump from Neon PostgreSQL.
-            
+
+            **Generated:** ${{ steps.timestamp.outputs.date }}
+            **Source:** Neon PostgreSQL (id-restapi, ap-southeast-1)
+
             ### Files
-            - `wilayah_id_{{ steps.timestamp.outputs.timestamp }}.dump` - Compressed custom format (recommended)
-            - `wilayah_id_{{ steps.timestamp.outputs.timestamp }}.sql.gz` - Plain SQL compressed
-            - `checksums.txt` - SHA256 checksums
-            
-            ### Usage
+            - `wilayah_id.dump` — Custom format, compressed (recommended, fastest restore)
+            - `wilayah_id.sql.gz` — Plain SQL, compressed (human readable)
+            - `checksums.txt` — SHA256 checksums
+
+            ### Restore
             ```bash
-            # Download and restore
-            pg_restore -d your_db -j 4 wilayah_id_*.dump
+            # Custom format (recommended)
+            pg_restore -d wilayah_id -j 4 wilayah_id.dump
+
+            # Plain SQL
+            gunzip -c wilayah_id.sql.gz | psql -d wilayah_id
             ```
-            
-            ### Data Statistics
-            - Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-            - Source: Neon PostgreSQL (id-restapi)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload artifacts (for PR/testing)
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v3
+      - name: Upload artifacts (for scheduled runs without release)
+        if: github.event_name == 'schedule'
+        uses: actions/upload-artifact@v4
         with:
           name: sql-dump-${{ steps.timestamp.outputs.timestamp }}
           path: |
-            wilayah_id_*.dump
-            wilayah_id_*.sql.gz
+            wilayah_id.dump
+            wilayah_id.sql.gz
           retention-days: 7

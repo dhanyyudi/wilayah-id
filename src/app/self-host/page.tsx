@@ -265,7 +265,7 @@ export default function SelfHostPage() {
                 <div>
                   <p className="font-medium text-sm">Recommended for most users</p>
                   <p className="text-sm text-muted-foreground">
-                    Includes PostgreSQL, PostGIS, and pre-loaded data. No manual ETL required.
+                    App server + PostgreSQL via Docker Compose. Load data via SQL dump after setup.
                   </p>
                 </div>
               </div>
@@ -334,11 +334,17 @@ docker compose logs -f app`}</CodeBlock>
                   icon={Download}
                   description="Get the latest compressed SQL dump from GitHub Releases."
                 >
-                  <CodeBlock title="Terminal">{`# Download latest release
-wget https://github.com/dhanyyudi/wilayah-id/releases/download/v1.0.0/wilayah_id_backup.sql.gz
+                  <CodeBlock title="Terminal">{`# Download latest release from GitHub Releases page
+# https://github.com/dhanyyudi/wilayah-id/releases/latest
 
-# Verify file size (~100MB)
-ls -lh wilayah_id_backup.sql.gz`}</CodeBlock>
+# Download .dump file (recommended — faster restore with pg_restore)
+wget https://github.com/dhanyyudi/wilayah-id/releases/latest/download/wilayah_id.dump
+
+# Or download plain SQL (human readable)
+# wget https://github.com/dhanyyudi/wilayah-id/releases/latest/download/wilayah_id.sql.gz
+
+# Verify file size (~100–150MB)
+ls -lh wilayah_id.dump`}</CodeBlock>
                 </StepCard>
 
                 <StepCard 
@@ -416,7 +422,7 @@ pnpm dev`}</CodeBlock>
                   <div className="grid grid-cols-2 gap-3">
                     {[
                       { name: "PostgreSQL", version: "15+ + PostGIS" },
-                      { name: "Node.js", version: "18+" },
+                      { name: "Node.js", version: "22+" },
                       { name: "Python", version: "3.11+" },
                       { name: "Disk Space", version: "~2 GB free" },
                     ].map((req) => (
