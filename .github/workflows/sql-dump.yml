@@ -43,15 +43,19 @@ jobs:
         run: |
           echo "Creating database dump from Neon..."
 
+          # Gunakan path eksplisit pg_dump 17 (hindari pg_dump 16 bawaan Ubuntu)
+          PG_DUMP=/usr/lib/postgresql/17/bin/pg_dump
+          echo "Using: $($PG_DUMP --version)"
+
           # Custom format — standardized name for /releases/latest/download/
-          pg_dump "${NEON_DATABASE_URL}" \
+          $PG_DUMP "${NEON_DATABASE_URL}" \
             --format=custom \
             --compress=9 \
             --verbose \
             --file=wilayah_id.dump
 
           # Plain SQL format
-          pg_dump "${NEON_DATABASE_URL}" \
+          $PG_DUMP "${NEON_DATABASE_URL}" \
             --format=plain \
             --compress=9 \
             --file=wilayah_id.sql.gz
