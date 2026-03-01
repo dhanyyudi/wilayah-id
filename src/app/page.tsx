@@ -264,7 +264,7 @@ export default function HomePage() {
                   <div className="w-3 h-3 rounded-full bg-indigo-500" />
                 </div>
                 <button
-                  onClick={() => navigator.clipboard.writeText("curl https://wilayah-id.vercel.app/api/v1/regions/provinces")}
+                  onClick={() => navigator.clipboard.writeText("curl https://wilayah-id-restapi.vercel.app/api/v1/regions/provinces")}
                   className="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 transition-colors"
                 >
                   <Copy className="w-3 h-3" />
@@ -273,7 +273,7 @@ export default function HomePage() {
               </div>
               <div className="p-5 text-left overflow-x-auto">
                 <code className="text-sm font-mono text-zinc-300">
-                  <span className="text-indigo-400">curl</span> https://wilayah-id.vercel.app/api/v1/regions/provinces
+                  <span className="text-indigo-400">curl</span> https://wilayah-id-restapi.vercel.app/api/v1/regions/provinces
                 </code>
               </div>
             </div>

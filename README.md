@@ -139,7 +139,7 @@ Base URL: `/api/v1`
 
 | Dataset | Source | Records |
 |---------|--------|---------|
-| Admin boundaries (SHP) | [BIG via batas-administrasi-indonesia](https://github.com/Olfrfrfr/batas-administrasi-indonesia) | 38 + 514 + 7.266 + 83.430 |
+| Admin boundaries (SHP) | [BIG via batas-administrasi-indonesia](https://github.com/Olfrfrfr/batas-administrasi-indonesia) | 38 + 514 + 7.285 + 83.762 |
 | Region codes | [region-id](https://github.com/nicnocquee/region-id) (Kepmendagri 2025) | 91.248 |
 | Postal codes | [postal-code-id](https://github.com/nicnocquee/postal-code-id) | 77.721 |
 

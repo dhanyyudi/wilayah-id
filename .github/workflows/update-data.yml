@@ -51,7 +51,7 @@ jobs:
           # Region codes (GitHub)
           curl -L -o data-downloads/region-id-latest.zip \
             https://github.com/lokabisa-oss/region-id/archive/refs/heads/main.zip || true
-          
+
           # Postal codes (GitHub)
           curl -L -o data-downloads/postal-code-id-latest.zip \
             https://github.com/lokabisa-oss/postal-code-id/archive/refs/heads/main.zip || true

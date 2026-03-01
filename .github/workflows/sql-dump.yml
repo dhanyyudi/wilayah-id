@@ -24,7 +24,7 @@ jobs:
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
-          sudo apt-get install -y postgresql-client-15
+          sudo apt-get install -y postgresql-client-17
 
       - name: Generate timestamp
         id: timestamp

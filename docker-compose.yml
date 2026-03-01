@@ -1,45 +1,17 @@
-version: '3.8'
-
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: wilayah-id-app
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/wilayah_id
-      - NEXT_PUBLIC_TILES_BASE_URL=/tiles
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - wilayah-network
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/v1/regions/provinces"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
   db:
-    image: postgis/postgis:15-3.4
+    image: postgis/postgis:17-3.5
     container_name: wilayah-id-db
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=wilayah_id
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: wilayah_id
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./sql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     ports:
       - "5432:5432"
-    networks:
-      - wilayah-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d wilayah_id"]
       interval: 10s
@@ -47,10 +19,38 @@ services:
       retries: 5
       start_period: 30s
 
+  app:
+    image: ghcr.io/dhanyyudi/wilayah-id:latest
+    container_name: wilayah-id-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/wilayah_id?sslmode=disable
+      NEXT_PUBLIC_TILES_BASE_URL: /tiles
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000/api/v1/regions/provinces', r => process.exit(r.statusCode === 200 ? 0 : 1))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
 volumes:
   postgres_data:
-    driver: local
 
-networks:
-  wilayah-network:
-    driver: bridge
+# =============================================================
+# SETUP: Load data after starting (choose one method):
+#
+#  a) SQL Dump (recommended — ~5 menit):
+#     wget https://github.com/dhanyyudi/wilayah-id/releases/latest/download/wilayah_id.dump
+#     docker exec -i wilayah-id-db pg_restore -U postgres -d wilayah_id -j 4 < wilayah_id.dump
+#
+#  b) Build from source (~30 menit):
+#     python -m venv etl-venv && source etl-venv/bin/activate
+#     pip install -r etl/requirements.txt
+#     DATABASE_URL=postgresql://postgres:postgres@localhost:5432/wilayah_id python etl/import_all.py
+# =============================================================
