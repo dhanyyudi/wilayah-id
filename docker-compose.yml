@@ -29,6 +29,8 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://postgres:postgres@db:5432/wilayah_id?sslmode=disable
       NEXT_PUBLIC_TILES_BASE_URL: /tiles
+    volumes:
+      - ./public/tiles:/app/public/tiles:ro
     depends_on:
       db:
         condition: service_healthy

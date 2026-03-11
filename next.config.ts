@@ -25,16 +25,18 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'https://wilayah-id-api.dhanypedia.it.com/api/:path*',
-      },
-      {
-        source: '/tiles/:path*',
-        destination: 'https://wilayah-id-api.dhanypedia.it.com/tiles/:path*',
-      },
-    ];
+    return {
+      beforeFiles: [
+        {
+          source: '/api/:path*',
+          destination: 'https://wilayah-id-api.dhanypedia.it.com/api/:path*',
+        },
+        {
+          source: '/tiles/:path*',
+          destination: 'https://wilayah-id-api.dhanypedia.it.com/tiles/:path*',
+        },
+      ]
+    };
   },
 };
 
