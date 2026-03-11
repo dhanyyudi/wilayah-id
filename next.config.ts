@@ -22,7 +22,6 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=60' },
         ],
       },
-      },
     ];
   },
   async rewrites() {
