@@ -27,6 +27,7 @@ export async function GET(
       const rows = await sql`
         SELECT
           d.kode_desa, d.kode_kec, d.nama_desa, d.tipe, d.area_km2,
+          d.jumlah_penduduk, d.pulau, d.jangkauan,
           kc.nama_kecamatan, kb.kode_kab, kb.nama_kabupaten,
           p.kode_prov, p.nama_provinsi,
           pc.kode_pos,
@@ -58,6 +59,10 @@ export async function GET(
           nama_provinsi: r.nama_provinsi,
           kode_pos: r.kode_pos,
           area_km2: r.area_km2,
+          jumlah_penduduk: r.jumlah_penduduk,
+          pulau: r.pulau,
+          jangkauan: r.jangkauan,
+          source: "Dukcapil 2024 via batas-administrasi-indonesia",
         },
         geometry: r.geometry,
       });
@@ -66,6 +71,7 @@ export async function GET(
     const rows = await sql`
       SELECT
         d.kode_desa, d.kode_kec, d.nama_desa, d.tipe, d.area_km2,
+        d.jumlah_penduduk, d.pulau, d.jangkauan,
         kc.nama_kecamatan, kb.kode_kab, kb.nama_kabupaten,
         p.kode_prov, p.nama_provinsi,
         pc.kode_pos

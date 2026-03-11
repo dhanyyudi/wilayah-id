@@ -21,6 +21,8 @@ export async function GET(
     const rows = await sql`
       SELECT
         kc.kode_kec, kc.kode_kab, kc.nama_kecamatan,
+        kc.jumlah_penduduk, kc.jumlah_kk, kc.kepadatan, kc.luas_wilayah,
+        kc.jumlah_desa, kc.jumlah_kel,
         kb.nama_kabupaten, kb.tipe AS tipe_kabupaten,
         p.kode_prov, p.nama_provinsi
       FROM kecamatan kc

@@ -228,6 +228,88 @@ async def reverse_geocode(lat: float, lng: float) -> Dict[str, Any]:
         conn.close()
 
 
+
+@mcp.tool()
+async def get_top_populated_regions(
+    level: str = "provinsi",
+    limit: int = 10,
+    order: str = "desc"
+) -> List[Dict[str, Any]]:
+    """
+    Get regions with the highest or lowest population.
+    
+    Args:
+        level: Administrative level (provinsi, kabupaten, kecamatan, desa). Default: provinsi
+        limit: Number of results to return (max 50). Default: 10
+        order: Sort order - 'desc' for highest populated, 'asc' for lowest. Default: desc
+    """
+    valid_levels = {"provinsi", "kabupaten", "kecamatan", "desa"}
+    if level.lower() not in valid_levels:
+        return [{"error": f"Invalid level. Must be one of: {', '.join(valid_levels)}"}]
+        
+    limit = min(max(1, limit), 50)  # constrain between 1 and 50
+    sort_order = "DESC" if order.lower() == "desc" else "ASC"
+    level = level.lower()
+    
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            if level == "provinsi":
+                sql = f"SELECT kode_prov as kode, nama_provinsi as nama, jumlah_penduduk, jumlah_kk, kepadatan, luas_wilayah FROM provinsi ORDER BY jumlah_penduduk {sort_order} NULLS LAST LIMIT %s"
+            elif level == "kabupaten":
+                sql = f"SELECT kode_kab as kode, nama_kabupaten as nama, tipe, jumlah_penduduk, jumlah_kk, kepadatan, luas_wilayah FROM kabupaten ORDER BY jumlah_penduduk {sort_order} NULLS LAST LIMIT %s"
+            elif level == "kecamatan":
+                sql = f"""SELECT c.kode_kec as kode, c.nama_kecamatan as nama, k.nama_kabupaten, 
+                          c.jumlah_penduduk, c.jumlah_kk, c.kepadatan, c.luas_wilayah 
+                          FROM kecamatan c JOIN kabupaten k ON c.kode_kab = k.kode_kab 
+                          ORDER BY c.jumlah_penduduk {sort_order} NULLS LAST LIMIT %s"""
+            else:  # desa
+                sql = f"""SELECT d.kode_desa as kode, d.nama_desa as nama, c.nama_kecamatan,
+                          d.jumlah_penduduk, d.pulau, d.jangkauan 
+                          FROM desa d JOIN kecamatan c ON d.kode_kec = c.kode_kec 
+                          ORDER BY d.jumlah_penduduk {sort_order} NULLS LAST LIMIT %s"""
+                          
+            cur.execute(sql, (limit,))
+            return [dict(row) for row in cur.fetchall()]
+    except Exception as e:
+        return [{"error": f"Database query failed: {str(e)}"}]
+    finally:
+        conn.close()
+
+
+@mcp.tool()
+async def get_demographic_summary(code: str) -> Dict[str, Any]:
+    """
+    Get an aggregated demographic summary for a specific region.
+    Returns population, households, density, area, and total administrative subdivisions.
+    
+    Args:
+        code: Administrative code (e.g., '31' for Jakarta)
+    """
+    details = await get_region_details(code)
+    
+    if "error" in details:
+        return details
+        
+    summary = {
+        "kode": code,
+    }
+    
+    if len(code) == 2: summary["nama"] = details.get("nama_provinsi")
+    elif len(code) == 4: summary["nama"] = details.get("nama_kabupaten")
+    elif len(code) == 6: summary["nama"] = details.get("nama_kecamatan")
+    elif len(code) == 10: summary["nama"] = details.get("nama_desa")
+
+    fields = ["jumlah_penduduk", "jumlah_kk", "kepadatan", "luas_wilayah", "area_km2",
+              "jumlah_kab", "jumlah_kota", "jumlah_kec", "jumlah_desa", "jumlah_kel"]
+              
+    for f in fields:
+        if f in details:
+            summary[f] = details[f]
+            
+    return summary
+
+
 @mcp.prompt()
 def indonesian_region_assistant() -> str:
     """Prompt for assisting users with Indonesian administrative boundaries."""
@@ -236,7 +318,9 @@ def indonesian_region_assistant() -> str:
 When helping users:
 1. Use `search_regions` to find the administrative codes for names like "Jakarta", "Bandung", etc.
 2. Use `get_region_details` to pull demographics and exact hierarchies based on the codes you found.
-3. Use `reverse_geocode` when users provide GPS coordinates to tell them exactly which village/district they are in.
+3. Use `get_top_populated_regions` to answer queries about the most/least populated areas.
+4. Use `get_demographic_summary` when the user asks for a high-level statistical overview of a region.
+5. Use `reverse_geocode` when users provide GPS coordinates to tell them exactly which village/district they are in.
 
 Important Context:
 - The data source is Dukcapil 2024 (Semester 1).

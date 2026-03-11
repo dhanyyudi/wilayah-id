@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Copy, MapPin, Building2, Hash, Mail, Landmark } from "lucide-react";
+import { Copy, MapPin, Building2, Hash, Mail, Landmark, Users, Home, Map } from "lucide-react";
 import type { MapGeoJSONFeature } from "maplibre-gl";
 
 export default function InfoPanel({
@@ -61,6 +61,21 @@ export default function InfoPanel({
     navigator.clipboard.writeText(text);
   };
 
+  const formatNumber = (num: string | number | undefined | null) => {
+    if (!num) return "-";
+    return parseInt(num.toString(), 10).toLocaleString("id-ID");
+  };
+
+  const renderStatRow = (icon: React.ReactNode, label: string, value: string | React.ReactNode) => (
+    <div className="flex items-center gap-2 text-xs">
+      <div className="w-3.5 h-3.5 text-muted-foreground shrink-0 flex items-center justify-center">
+        {icon}
+      </div>
+      <span className="text-muted-foreground whitespace-nowrap">{label}</span>
+      <span className="ml-auto font-medium text-right break-words">{value}</span>
+    </div>
+  );
+
   return (
     <div className="w-72 text-sm">
       {/* Header — pr-6 avoids overlap with MapPopup close button */}
@@ -80,8 +95,44 @@ export default function InfoPanel({
 
       <Separator className="mb-3" />
 
+      {/* Demographics Area */}
+      {(p.jumlah_penduduk || p.jumlah_kk || p.kepadatan) && (
+        <>
+          <div className="space-y-2 mb-3">
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+              Data Kependudukan
+            </h4>
+            
+            {p.jumlah_penduduk && renderStatRow(<Users className="w-3 h-3" />, "Penduduk", `${formatNumber(p.jumlah_penduduk)} jiwa`)}
+            {p.jumlah_kk && renderStatRow(<Home className="w-3 h-3" />, "Kartu Keluarga", `${formatNumber(p.jumlah_kk)} KK`)}
+            {p.kepadatan && renderStatRow(<Map className="w-3 h-3" />, "Kepadatan", `${formatNumber(p.kepadatan)} jiwa/km²`)}
+            {isDesa && p.jangkauan && renderStatRow(<MapPin className="w-3 h-3" />, "Jangkauan", p.jangkauan)}
+          </div>
+          <Separator className="mb-3" />
+        </>
+      )}
+
+      {/* Administrative Subdivisions Area */}
+      {(p.jumlah_kab || p.jumlah_kota || p.jumlah_kec || p.jumlah_desa || p.jumlah_kel) && (
+        <>
+          <div className="space-y-2 mb-3">
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+              Wilayah Administratif
+            </h4>
+            
+            {(p.jumlah_kab || p.jumlah_kota) && renderStatRow(<Building2 className="w-3 h-3" />, "Kab/Kota", `${parseInt(p.jumlah_kab || "0") + parseInt(p.jumlah_kota || "0")}`)}
+            {p.jumlah_kec && renderStatRow(<MapPin className="w-3 h-3" />, "Kecamatan", formatNumber(p.jumlah_kec))}
+            {(p.jumlah_desa || p.jumlah_kel) && renderStatRow(<Hash className="w-3 h-3" />, "Desa/Kelurahan", `${parseInt(p.jumlah_desa || "0") + parseInt(p.jumlah_kel || "0")}`)}
+          </div>
+          <Separator className="mb-3" />
+        </>
+      )}
+
       {/* Region ID */}
       <div className="space-y-2 mb-3">
+        <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+          Identitas Wilayah
+        </h4>
         <div className="flex items-center gap-2 text-xs">
           <Hash className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
           <span className="text-muted-foreground">Kode Wilayah</span>

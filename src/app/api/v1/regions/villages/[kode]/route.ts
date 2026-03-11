@@ -22,6 +22,7 @@ export async function GET(
     const rows = await sql`
       SELECT
         d.kode_desa, d.nama_desa, d.tipe,
+        d.jumlah_penduduk, d.pulau, d.jangkauan, d.area_km2,
         kc.kode_kec, kc.nama_kecamatan,
         kb.kode_kab, kb.nama_kabupaten,
         p.kode_prov, p.nama_provinsi

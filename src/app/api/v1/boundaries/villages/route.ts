@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
       const rows = await sql`
         SELECT
           d.kode_desa, d.kode_kec, d.nama_desa, d.tipe, d.area_km2,
+          d.jumlah_penduduk, d.pulau, d.jangkauan,
           ST_AsGeoJSON(d.geom, 5)::json AS geometry
         FROM desa d
         WHERE d.kode_kec = ${districtCode}
@@ -45,6 +46,10 @@ export async function GET(request: NextRequest) {
           nama_desa: r.nama_desa,
           tipe: r.tipe,
           area_km2: r.area_km2,
+          jumlah_penduduk: r.jumlah_penduduk,
+          pulau: r.pulau,
+          jangkauan: r.jangkauan,
+          source: "Dukcapil 2024 via batas-administrasi-indonesia",
         },
         geometry: r.geometry,
       }));
@@ -53,7 +58,8 @@ export async function GET(request: NextRequest) {
     }
 
     const rows = await sql`
-      SELECT kode_desa, kode_kec, nama_desa, tipe, area_km2
+      SELECT kode_desa, kode_kec, nama_desa, tipe, area_km2,
+             jumlah_penduduk, pulau, jangkauan
       FROM desa
       WHERE kode_kec = ${districtCode}
       ORDER BY kode_desa

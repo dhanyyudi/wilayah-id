@@ -28,7 +28,9 @@ export async function GET(request: NextRequest) {
 
     const sql = getDb();
     const rows = await sql`
-      SELECT kode_kab, kode_prov, nama_kabupaten, tipe
+      SELECT kode_kab, kode_prov, nama_kabupaten, tipe,
+             jumlah_penduduk, jumlah_kk, kepadatan, luas_wilayah, 
+             jumlah_kec, jumlah_desa, jumlah_kel
       FROM kabupaten
       WHERE kode_prov = ${provinceCode}
       ORDER BY kode_kab

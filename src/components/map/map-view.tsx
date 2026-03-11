@@ -33,11 +33,165 @@ export default function VectorLayerManager({ layerVisibility, onFeatureClick, hi
   const visibilityRef = useRef(layerVisibility);
 
   // Keep ref in sync with prop
-  visibilityRef.current = layerVisibility;
+  useEffect(() => {
+    visibilityRef.current = layerVisibility;
+  }, [layerVisibility]);
 
   const tilesBaseUrl = process.env.NEXT_PUBLIC_TILES_BASE_URL || (typeof window !== "undefined" ? `${window.location.origin}/tiles` : "/tiles");
 
   // Add sources and layers once map is loaded / style changes
+  // --- helpers ---
+
+  function addSources(m: maplibregl.Map) {
+    if (m.getSource("provinsi")) return; // Already added
+
+    // Indonesia bounding box: [west, south, east, north]
+    const idBounds: [number, number, number, number] = [94.5, -11.5, 141.5, 6.5];
+
+    m.addSource("provinsi", {
+      type: "vector",
+      tiles: [`${tilesBaseUrl}/provinsi/{z}/{x}/{y}.pbf`],
+      minzoom: 3,
+      maxzoom: 9,
+      bounds: idBounds,
+      promoteId: "kode_prov",
+    });
+    m.addSource("kabupaten", {
+      type: "vector",
+      tiles: [`${tilesBaseUrl}/kabupaten/{z}/{x}/{y}.pbf`],
+      minzoom: 7,
+      maxzoom: 11,
+      bounds: idBounds,
+      promoteId: "kode_kab",
+    });
+    m.addSource("kecamatan", {
+      type: "vector",
+      tiles: [`${tilesBaseUrl}/kecamatan/{z}/{x}/{y}.pbf`],
+      minzoom: 10,
+      maxzoom: 12,
+      bounds: idBounds,
+      promoteId: "kode_kec",
+    });
+    m.addSource("desa", {
+      type: "vector",
+      tiles: [`${tilesBaseUrl}/desa/{z}/{x}/{y}.pbf`],
+      minzoom: 12,
+      maxzoom: 14,
+      bounds: idBounds,
+      promoteId: "kode_desa",
+    });
+  }
+
+  function addLayers(m: maplibregl.Map) {
+    if (m.getLayer("provinsi-fill")) return; // Already added
+
+    // Provinsi
+    m.addLayer({
+      id: "provinsi-fill",
+      type: "fill",
+      source: "provinsi",
+      "source-layer": "provinsi",
+      paint: {
+        "fill-color": [
+          "case",
+          ["boolean", ["feature-state", "selected"], false],
+          "rgba(45, 212, 191, 0.4)", // Neon Cyan Blinking
+          ["boolean", ["feature-state", "hover"], false],
+          HOVER_COLOR,
+          LAYER_COLORS.provinsi.fill,
+        ],
+      },
+    });
+    m.addLayer({
+      id: "provinsi-line",
+      type: "line",
+      source: "provinsi",
+      "source-layer": "provinsi",
+      paint: { "line-color": LAYER_COLORS.provinsi.stroke, "line-width": LAYER_COLORS.provinsi.width },
+    });
+
+    // Kabupaten
+    m.addLayer({
+      id: "kabupaten-fill",
+      type: "fill",
+      source: "kabupaten",
+      "source-layer": "kabupaten",
+      paint: {
+        "fill-color": [
+          "case",
+          ["boolean", ["feature-state", "selected"], false],
+          "rgba(45, 212, 191, 0.4)", // Neon Cyan Blinking
+          ["boolean", ["feature-state", "hover"], false],
+          HOVER_COLOR,
+          LAYER_COLORS.kabupaten.fill,
+        ],
+      },
+    });
+    m.addLayer({
+      id: "kabupaten-line",
+      type: "line",
+      source: "kabupaten",
+      "source-layer": "kabupaten",
+      paint: { "line-color": LAYER_COLORS.kabupaten.stroke, "line-width": LAYER_COLORS.kabupaten.width },
+    });
+
+    // Kecamatan
+    m.addLayer({
+      id: "kecamatan-fill",
+      type: "fill",
+      source: "kecamatan",
+      "source-layer": "kecamatan",
+      paint: {
+        "fill-color": [
+          "case",
+          ["boolean", ["feature-state", "selected"], false],
+          "rgba(45, 212, 191, 0.4)", // Neon Cyan Blinking
+          ["boolean", ["feature-state", "hover"], false],
+          HOVER_COLOR,
+          LAYER_COLORS.kecamatan.fill,
+        ],
+      },
+    });
+    m.addLayer({
+      id: "kecamatan-line",
+      type: "line",
+      source: "kecamatan",
+      "source-layer": "kecamatan",
+      paint: { "line-color": LAYER_COLORS.kecamatan.stroke, "line-width": LAYER_COLORS.kecamatan.width },
+    });
+
+    // Desa
+    m.addLayer({
+      id: "desa-fill",
+      type: "fill",
+      source: "desa",
+      "source-layer": "desa",
+      paint: {
+        "fill-color": [
+          "case",
+          ["boolean", ["feature-state", "selected"], false],
+          "rgba(45, 212, 191, 0.4)", // Neon Cyan Blinking
+          ["boolean", ["feature-state", "hover"], false],
+          HOVER_COLOR,
+          LAYER_COLORS.desa.fill,
+        ],
+      },
+    });
+    m.addLayer({
+      id: "desa-line",
+      type: "line",
+      source: "desa",
+      "source-layer": "desa",
+      paint: { "line-color": LAYER_COLORS.desa.stroke, "line-width": LAYER_COLORS.desa.width },
+    });
+  }
+
+  function setLayerVisibility(m: maplibregl.Map, layer: string, visible: boolean) {
+    const val = visible ? "visible" : "none";
+    if (m.getLayer(`${layer}-fill`)) m.setLayoutProperty(`${layer}-fill`, "visibility", val);
+    if (m.getLayer(`${layer}-line`)) m.setLayoutProperty(`${layer}-line`, "visibility", val);
+  }
+
   useEffect(() => {
     if (!map || !isLoaded) return;
 
@@ -266,158 +420,6 @@ export default function VectorLayerManager({ layerVisibility, onFeatureClick, hi
       } catch { /* source may not exist yet */ }
     }
   }, [map, isLoaded, highlightedFeature, blink]);
-
-  // --- helpers ---
-
-  function addSources(m: maplibregl.Map) {
-    if (m.getSource("provinsi")) return; // Already added
-
-    // Indonesia bounding box: [west, south, east, north]
-    const idBounds: [number, number, number, number] = [94.5, -11.5, 141.5, 6.5];
-
-    m.addSource("provinsi", {
-      type: "vector",
-      tiles: [`${tilesBaseUrl}/provinsi/{z}/{x}/{y}.pbf`],
-      minzoom: 3,
-      maxzoom: 9,
-      bounds: idBounds,
-      promoteId: "kode_prov",
-    });
-    m.addSource("kabupaten", {
-      type: "vector",
-      tiles: [`${tilesBaseUrl}/kabupaten/{z}/{x}/{y}.pbf`],
-      minzoom: 7,
-      maxzoom: 11,
-      bounds: idBounds,
-      promoteId: "kode_kab",
-    });
-    m.addSource("kecamatan", {
-      type: "vector",
-      tiles: [`${tilesBaseUrl}/kecamatan/{z}/{x}/{y}.pbf`],
-      minzoom: 10,
-      maxzoom: 12,
-      bounds: idBounds,
-      promoteId: "kode_kec",
-    });
-    m.addSource("desa", {
-      type: "vector",
-      tiles: [`${tilesBaseUrl}/desa/{z}/{x}/{y}.pbf`],
-      minzoom: 12,
-      maxzoom: 14,
-      bounds: idBounds,
-      promoteId: "kode_desa",
-    });
-  }
-
-  function addLayers(m: maplibregl.Map) {
-    if (m.getLayer("provinsi-fill")) return; // Already added
-
-    // Provinsi
-    m.addLayer({
-      id: "provinsi-fill",
-      type: "fill",
-      source: "provinsi",
-      "source-layer": "provinsi",
-      paint: {
-        "fill-color": [
-          "case",
-          ["boolean", ["feature-state", "selected"], false],
-          "rgba(45, 212, 191, 0.4)", // Neon Cyan Blinking
-          ["boolean", ["feature-state", "hover"], false],
-          HOVER_COLOR,
-          LAYER_COLORS.provinsi.fill,
-        ],
-      },
-    });
-    m.addLayer({
-      id: "provinsi-line",
-      type: "line",
-      source: "provinsi",
-      "source-layer": "provinsi",
-      paint: { "line-color": LAYER_COLORS.provinsi.stroke, "line-width": LAYER_COLORS.provinsi.width },
-    });
-
-    // Kabupaten
-    m.addLayer({
-      id: "kabupaten-fill",
-      type: "fill",
-      source: "kabupaten",
-      "source-layer": "kabupaten",
-      paint: {
-        "fill-color": [
-          "case",
-          ["boolean", ["feature-state", "selected"], false],
-          "rgba(45, 212, 191, 0.4)", // Neon Cyan Blinking
-          ["boolean", ["feature-state", "hover"], false],
-          HOVER_COLOR,
-          LAYER_COLORS.kabupaten.fill,
-        ],
-      },
-    });
-    m.addLayer({
-      id: "kabupaten-line",
-      type: "line",
-      source: "kabupaten",
-      "source-layer": "kabupaten",
-      paint: { "line-color": LAYER_COLORS.kabupaten.stroke, "line-width": LAYER_COLORS.kabupaten.width },
-    });
-
-    // Kecamatan
-    m.addLayer({
-      id: "kecamatan-fill",
-      type: "fill",
-      source: "kecamatan",
-      "source-layer": "kecamatan",
-      paint: {
-        "fill-color": [
-          "case",
-          ["boolean", ["feature-state", "selected"], false],
-          "rgba(45, 212, 191, 0.4)", // Neon Cyan Blinking
-          ["boolean", ["feature-state", "hover"], false],
-          HOVER_COLOR,
-          LAYER_COLORS.kecamatan.fill,
-        ],
-      },
-    });
-    m.addLayer({
-      id: "kecamatan-line",
-      type: "line",
-      source: "kecamatan",
-      "source-layer": "kecamatan",
-      paint: { "line-color": LAYER_COLORS.kecamatan.stroke, "line-width": LAYER_COLORS.kecamatan.width },
-    });
-
-    // Desa
-    m.addLayer({
-      id: "desa-fill",
-      type: "fill",
-      source: "desa",
-      "source-layer": "desa",
-      paint: {
-        "fill-color": [
-          "case",
-          ["boolean", ["feature-state", "selected"], false],
-          "rgba(45, 212, 191, 0.4)", // Neon Cyan Blinking
-          ["boolean", ["feature-state", "hover"], false],
-          HOVER_COLOR,
-          LAYER_COLORS.desa.fill,
-        ],
-      },
-    });
-    m.addLayer({
-      id: "desa-line",
-      type: "line",
-      source: "desa",
-      "source-layer": "desa",
-      paint: { "line-color": LAYER_COLORS.desa.stroke, "line-width": LAYER_COLORS.desa.width },
-    });
-  }
-
-  function setLayerVisibility(m: maplibregl.Map, layer: string, visible: boolean) {
-    const val = visible ? "visible" : "none";
-    if (m.getLayer(`${layer}-fill`)) m.setLayoutProperty(`${layer}-fill`, "visibility", val);
-    if (m.getLayer(`${layer}-line`)) m.setLayoutProperty(`${layer}-line`, "visibility", val);
-  }
 
   // This component renders nothing — it only manages map state via hooks
   return null;

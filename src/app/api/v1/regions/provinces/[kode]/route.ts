@@ -20,7 +20,8 @@ export async function GET(
 
     const sql = getDb();
     const rows = await sql`
-      SELECT kode_prov, nama_provinsi
+      SELECT kode_prov, nama_provinsi, jumlah_penduduk, jumlah_kk, kepadatan, 
+             luas_wilayah, jumlah_kab, jumlah_kota, jumlah_kec, jumlah_desa, jumlah_kel
       FROM provinsi
       WHERE kode_prov = ${kode}
     `;

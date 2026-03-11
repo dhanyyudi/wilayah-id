@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
       const rows = await sql`
         SELECT
           kb.kode_kab, kb.kode_prov, kb.nama_kabupaten, kb.tipe, kb.area_km2,
+          kb.jumlah_penduduk, kb.jumlah_kk, kb.kepadatan, kb.luas_wilayah, kb.jumlah_kec, kb.jumlah_desa, kb.jumlah_kel,
           p.nama_provinsi,
           ST_AsGeoJSON(kb.geom, 6)::json AS geometry
         FROM kabupaten kb
@@ -48,6 +49,14 @@ export async function GET(request: NextRequest) {
           tipe: r.tipe,
           nama_provinsi: r.nama_provinsi,
           area_km2: r.area_km2,
+          jumlah_penduduk: r.jumlah_penduduk,
+          jumlah_kk: r.jumlah_kk,
+          kepadatan: r.kepadatan,
+          luas_wilayah: r.luas_wilayah,
+          jumlah_kec: r.jumlah_kec,
+          jumlah_desa: r.jumlah_desa,
+          jumlah_kel: r.jumlah_kel,
+          source: "Dukcapil 2024 via batas-administrasi-indonesia",
         },
         geometry: r.geometry,
       }));
@@ -56,7 +65,8 @@ export async function GET(request: NextRequest) {
     }
 
     const rows = await sql`
-      SELECT kode_kab, kode_prov, nama_kabupaten, tipe, area_km2
+      SELECT kode_kab, kode_prov, nama_kabupaten, tipe, area_km2,
+             jumlah_penduduk, jumlah_kk, kepadatan, luas_wilayah, jumlah_kec, jumlah_desa, jumlah_kel
       FROM kabupaten
       WHERE kode_prov = ${provinceCode}
       ORDER BY kode_kab

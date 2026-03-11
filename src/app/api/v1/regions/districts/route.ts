@@ -25,7 +25,9 @@ export async function GET(request: NextRequest) {
 
     const sql = getDb();
     const rows = await sql`
-      SELECT kode_kec, kode_kab, nama_kecamatan
+      SELECT kode_kec, kode_kab, nama_kecamatan,
+             jumlah_penduduk, jumlah_kk, kepadatan, luas_wilayah,
+             jumlah_desa, jumlah_kel
       FROM kecamatan
       WHERE kode_kab = ${regencyCode}
       ORDER BY kode_kec

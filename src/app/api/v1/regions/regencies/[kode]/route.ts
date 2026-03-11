@@ -21,6 +21,8 @@ export async function GET(
     const rows = await sql`
       SELECT
         kb.kode_kab, kb.kode_prov, kb.nama_kabupaten, kb.tipe,
+        kb.jumlah_penduduk, kb.jumlah_kk, kb.kepadatan, kb.luas_wilayah, 
+        kb.jumlah_kec, kb.jumlah_desa, kb.jumlah_kel,
         p.nama_provinsi
       FROM kabupaten kb
       JOIN provinsi p ON kb.kode_prov = p.kode_prov

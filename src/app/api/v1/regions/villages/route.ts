@@ -25,7 +25,8 @@ export async function GET(request: NextRequest) {
 
     const sql = getDb();
     const rows = await sql`
-      SELECT kode_desa, kode_kec, nama_desa, tipe
+      SELECT kode_desa, kode_kec, nama_desa, tipe,
+             jumlah_penduduk, pulau, jangkauan, area_km2
       FROM desa
       WHERE kode_kec = ${districtCode}
       ORDER BY kode_desa
