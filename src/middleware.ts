@@ -12,7 +12,7 @@ export function middleware(request: NextRequest) {
   
   // Proxy Tile requests to the homeserver's dedicated tile server
   if (url.pathname.startsWith('/tiles/')) {
-    const backendUrl = new URL(url.pathname + url.search, 'https://wilayah-id-tiles.dhanypedia.it.com')
+    const backendUrl = new URL(url.pathname.replace('/tiles', '') + url.search, 'https://tiles.dhanypedia.it.com')
     return NextResponse.rewrite(backendUrl)
   }
 
