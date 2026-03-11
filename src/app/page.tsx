@@ -236,8 +236,8 @@ export default function HomePage() {
           <div className="space-y-4">
             <div className="flex items-center justify-center gap-4">
               <span className="text-4xl sm:text-5xl" role="img" aria-label="Bendera Indonesia">🇮🇩</span>
-              <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight">
-                <span className="bg-gradient-to-br from-indigo-600 via-blue-600 to-sky-500 dark:from-indigo-400 dark:via-blue-400 dark:to-sky-400 bg-clip-text text-transparent">
+              <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight pb-2">
+                <span className="bg-gradient-to-r from-red-600 to-zinc-900 dark:from-red-500 dark:to-white bg-clip-text text-transparent">
                   wilayah-id
                 </span>
               </h1>
