@@ -4,9 +4,9 @@ services:
     container_name: wilayah-id-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: wilayah_id
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-wilayah_id}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./sql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
@@ -38,6 +38,19 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  mcp-server:
+    build: ./mcp
+    container_name: wilayah-id-mcp
+    environment:
+      # Use the read-only user for MCP
+      - DATABASE_URL=postgresql://${POSTGRES_READER_USER:-wilayah_reader}:${POSTGRES_READER_PASSWORD:-wilayah_reader_secret}@db:5432/${POSTGRES_DB:-wilayah_id}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   postgres_data:

@@ -13,6 +13,7 @@ REST API & Webmap interaktif untuk batas administrasi Indonesia: **38 provinsi, 
 - **Vector Tiles** — 4 layer MVT (.pbf) via Tippecanoe, served statik dari Vercel CDN
 - **Webmap Interaktif** — MapLibre GL JS v5 via [mapcn](https://mapcn.dev), dark/light mode
 - **OGC Compliant** — WMS 1.3.0 (GetCapabilities, GetMap, GetFeatureInfo) + WFS 2.0 (GetFeature, DescribeFeatureType)
+- **MCP Server** — Integrasi langsung dengan Claude Desktop / Cursor Server via Model Context Protocol (FastMCP)
 - **PostGIS** — Full geometry data (MultiPolygon) untuk semua level administrasi
 - **Open Source** — Data dari BIG via [batas-administrasi-indonesia](https://github.com/Alf-Anas/batas-administrasi-indonesia)
 
@@ -120,6 +121,29 @@ Base URL: `/api/v1`
 | `kabupaten` | z7–11 | 514 |
 | `kecamatan` | z10–12 | 7.285 |
 | `desa` | z12–14 | 83.762 |
+
+## 🤖 Model Context Protocol (MCP)
+
+Wilayah-ID menyediakan MCP server publik yang bisa dihubungkan ke Agentic LLMs (Claude Desktop, Cursor, dll). MCP Server ini memberikan AI Anda kemampuan untuk melakukan lookup administrasi wilayah Indonesia dan reverse geocoding.
+
+**Tools yang tersedia:**
+- `search_regions`: Pencarian wilayah berdasarkan nama
+- `get_region_details`: Detail demografis berdasarkan kode wilayah (BPS)
+- `reverse_geocode`: Mengambil hierarki wilayah dari koordinat (Lat/Lng)
+
+### Cara menghubungkan di Claude Desktop / Cursor:
+Tambahkan config berikut ke file `claude_desktop_config.json` Anda:
+
+```json
+{
+  "mcpServers": {
+    "wilayah-id-mcp": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/inspector", "https://wilayah-id-mcp.dhanypedia.it.com/sse"]
+    }
+  }
+}
+```
 
 ## 🛠️ Tech Stack
 

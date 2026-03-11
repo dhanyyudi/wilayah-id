@@ -5,9 +5,9 @@ services:
     image: postgis/postgis:15-3.4-alpine
     container_name: wilayah-db
     environment:
-      POSTGRES_USER: wilayah
-      POSTGRES_PASSWORD: wilayah123
-      POSTGRES_DB: wilayah_id
+      POSTGRES_USER: ${POSTGRES_USER:-wilayah}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wilayah123}
+      POSTGRES_DB: ${POSTGRES_DB:-wilayah_id}
     ports:
       - "5432:5432"
     volumes:
