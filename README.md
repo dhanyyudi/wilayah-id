@@ -15,7 +15,7 @@ REST API & Webmap interaktif untuk batas administrasi Indonesia: **38 provinsi, 
 - **OGC Compliant** — WMS 1.3.0 (GetCapabilities, GetMap, GetFeatureInfo) + WFS 2.0 (GetFeature, DescribeFeatureType)
 - **MCP Server** — Integrasi langsung dengan Claude Desktop / Cursor Server via Model Context Protocol (FastMCP)
 - **PostGIS** — Full geometry data (MultiPolygon) untuk semua level administrasi
-- **Open Source** — Data dari BIG via [batas-administrasi-indonesia](https://github.com/Alf-Anas/batas-administrasi-indonesia)
+- **Open Source** — Data Batas Administrasi dari [Ditjen Dukcapil Kemendagri (2024)](https://gis.dukcapil.kemendagri.go.id/peta/)
 
 ## 🚀 Quick Start
 
@@ -163,7 +163,7 @@ Tambahkan config berikut ke file `claude_desktop_config.json` Anda:
 
 | Dataset | Source | Records |
 |---------|--------|---------|
-| Admin boundaries (SHP) | [BIG via batas-administrasi-indonesia](https://github.com/Olfrfrfr/batas-administrasi-indonesia) | 38 + 514 + 7.285 + 83.762 |
+| Admin boundaries (SHP) | [Ditjen Dukcapil Kemendagri (2024)](https://gis.dukcapil.kemendagri.go.id/peta/) | 38 + 514 + 7.285 + 83.762 |
 | Region codes | [region-id](https://github.com/nicnocquee/region-id) (Kepmendagri 2025) | 91.248 |
 | Postal codes | [postal-code-id](https://github.com/nicnocquee/postal-code-id) | 77.721 |
 
