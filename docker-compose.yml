@@ -9,10 +9,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-wilayah_id}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
       - ./sql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
-    ports:
-      - "5432:5432"
+    networks:
+      - private_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d wilayah_id"]
       interval: 10s
@@ -24,8 +24,8 @@ services:
     image: ghcr.io/dhanyyudi/wilayah-id:latest
     container_name: wilayah-id-app
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    networks:
+      - private_network
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://postgres:postgres@db:5432/wilayah_id?sslmode=disable
@@ -48,8 +48,8 @@ services:
     environment:
       # Use the read-only user for MCP
       - DATABASE_URL=postgresql://${POSTGRES_READER_USER:-wilayah_reader}:${POSTGRES_READER_PASSWORD:-wilayah_reader_secret}@db:5432/${POSTGRES_DB:-wilayah_id}
-    ports:
-      - "8000:8000"
+    networks:
+      - private_network
     depends_on:
       db:
         condition: service_healthy
@@ -59,22 +59,20 @@ services:
     image: cybertec/pgwatch2:latest
     container_name: wilayah-id-pgwatch2
     restart: unless-stopped
-    ports:
-      - "3030:3000" # Grafana Dashboards
-      - "8080:8080" # Web Configuration UI
+    networks:
+      - private_network
     environment:
       - PW2_TESTDB=false
     volumes:
-      - pgwatch2_data:/var/lib/postgresql
-      - pgwatch2_grafana:/var/lib/grafana
+      - ./data/pgwatch2_data:/var/lib/postgresql
+      - ./data/pgwatch2_grafana:/var/lib/grafana
     depends_on:
       db:
         condition: service_healthy
 
-volumes:
-  postgres_data:
-  pgwatch2_data:
-  pgwatch2_grafana:
+networks:
+  private_network:
+    external: true
 
 # =============================================================
 # SETUP: Load data after starting (choose one method):
