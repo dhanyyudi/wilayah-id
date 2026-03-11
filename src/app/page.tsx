@@ -633,9 +633,9 @@ export default function HomePage() {
               <h4 className="font-semibold text-sm">Data Sources</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
-                  <a href="https://github.com/Alf-Anas/batas-administrasi-indonesia" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors flex items-center gap-1.5">
+                  <a href="https://gis.dukcapil.kemendagri.go.id/peta/" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors flex items-center gap-1.5">
                     <Database className="w-3.5 h-3.5" />
-                    Batas Administrasi (BIG)
+                    Batas Administrasi (Kemendagri 2024)
                   </a>
                 </li>
                 <li>

@@ -116,8 +116,8 @@ export default function OGCPage() {
               <Globe className="w-3 h-3 mr-1" />
               OGC Compliant
             </Badge>
-            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-xs px-3 py-1">
-              ⚠️ Beta - QGIS compatibility issues
+            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs px-3 py-1">
+              ✅ Stable - QGIS/ArcGIS Ready
             </Badge>
           </div>
           <h1 className="text-4xl sm:text-5xl font-extrabold mb-4 tracking-tight">
@@ -129,12 +129,10 @@ export default function OGCPage() {
             Integrasi langsung dengan <strong>QGIS, ArcGIS, MapInfo</strong>, dan software GIS lainnya 
             menggunakan standar OGC (Open Geospatial Consortium).
           </p>
-          <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 max-w-2xl mx-auto mb-6 text-left">
-            <p className="text-sm text-amber-800 dark:text-amber-200">
-              <strong>ℹ️ Rekomendasi:</strong> WMS/WFS masih dalam tahap beta dan mungkin bermasalah dengan QGIS. 
-              Untuk penggunaan yang lebih stabil, gunakan <strong>REST API langsung</strong> dengan endpoint 
-              <code className="bg-amber-500/20 px-1.5 py-0.5 rounded text-xs mx-1">/api/v1/boundaries/...</code> 
-              yang mengembalikan GeoJSON siap pakai.
+          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4 max-w-2xl mx-auto mb-6 text-left">
+            <p className="text-sm text-emerald-800 dark:text-emerald-200">
+              <strong>✅ Status: Stable.</strong> Layanan WMS/WFS kami didukung oleh database PostGIS on-premise yang sangat cepat,
+              mengeliminasi masalah <em>timeout</em> saat merender data spasial kompleks. Sangat cocok untuk dihubungkan langsung ke QGIS atau ArcGIS Pro.
             </p>
           </div>
           <div className="flex flex-wrap justify-center gap-3">
@@ -364,8 +362,8 @@ curl "${baseUrl}/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&LAYERS=provinsi&QUERY_LA
           </div>
           
           <p className="text-muted-foreground mb-6">
-            Jika WMS/WFS bermasalah dengan QGIS, gunakan REST API kami yang mengembalikan 
-            GeoJSON siap pakai. Cocok untuk import langsung ke QGIS, ArcGIS, atau aplikasi lain.
+            Gunakan REST API jika Anda sedang membangun aplikasi web atau mobile modern yang membutuhkan 
+            data batas wilayah dalam format GeoJSON murni, tanpa memerlukan software Desktop GIS (seperti QGIS/ArcGIS).
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
