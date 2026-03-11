@@ -3,6 +3,7 @@ services:
     image: postgis/postgis:17-3.5
     container_name: wilayah-id-db
     restart: unless-stopped
+    command: postgres -c shared_preload_libraries=pg_stat_statements
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -54,8 +55,26 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  pgwatch2:
+    image: cybertec/pgwatch2:latest
+    container_name: wilayah-id-pgwatch2
+    restart: unless-stopped
+    ports:
+      - "3030:3000" # Grafana Dashboards
+      - "8080:8080" # Web Configuration UI
+    environment:
+      - PW2_TESTDB=false
+    volumes:
+      - pgwatch2_data:/var/lib/postgresql
+      - pgwatch2_grafana:/var/lib/grafana
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   postgres_data:
+  pgwatch2_data:
+  pgwatch2_grafana:
 
 # =============================================================
 # SETUP: Load data after starting (choose one method):
