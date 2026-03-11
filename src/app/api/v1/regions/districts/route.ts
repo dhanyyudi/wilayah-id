@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     return apiSuccess(rows, {
       total: rows.length,
-      source: "region-id v1.0.1 (lokabisa-oss)",
+      source: "wilayah-id v2.0.0 (Dukcapil 2024)",
     });
   } catch (error) {
     console.error("GET /api/v1/regions/districts error:", error);

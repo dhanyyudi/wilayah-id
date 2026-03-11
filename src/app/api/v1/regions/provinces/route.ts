@@ -16,8 +16,8 @@ export async function GET() {
 
     return apiSuccess(rows, {
       total: rows.length,
-      source: "region-id v1.0.1 (lokabisa-oss)",
-      attribution: "Kepmendagri 2025",
+      source: "wilayah-id v2.0.0 (Dukcapil 2024)",
+      attribution: "WebGIS Dukcapil Kemendagri 2024",
     });
   } catch (error) {
     console.error("GET /api/v1/regions/provinces error:", error);

@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
 
     return apiSuccess(results, {
       total: results.length,
-      source: "region-id v1.0.1 (lokabisa-oss)",
+      source: "wilayah-id v2.0.0 (Dukcapil 2024)",
     });
   } catch (error) {
     console.error("GET /api/v1/regions/search error:", error);

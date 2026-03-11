@@ -13,7 +13,6 @@ import {
 } from '@/lib/ogc-utils';
 import { geoJSONToGML } from '@/lib/gml-utils';
 import { getDb } from '@/lib/db';
-import { neon } from '@neondatabase/serverless';
 
 export const dynamic = 'force-dynamic';
 
