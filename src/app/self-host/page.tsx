@@ -550,7 +550,7 @@ NEXT_PUBLIC_TILES_BASE_URL=/tiles
             </p>
             <ul className="space-y-1.5">
               {[
-                { name: "Batas Administrasi (BIG)", url: "https://github.com/Alf-Anas/batas-administrasi-indonesia", desc: "Official boundary shapes from Badan Informasi Geospasial" },
+                { name: "Batas Administrasi (Kemendagri)", url: "https://gis.dukcapil.kemendagri.go.id/peta/", desc: "Official boundary shapes from Kemendagri (2024)" },
                 { name: "Kode Wilayah (Kemendagri)", url: "https://github.com/lokabisa-oss/region-id", desc: "Region codes from Ministry of Home Affairs" },
                 { name: "Kode Pos (Pos Indonesia)", url: "https://github.com/lokabisa-oss/postal-code-id", desc: "Postal codes from Pos Indonesia" },
               ].map((source) => (

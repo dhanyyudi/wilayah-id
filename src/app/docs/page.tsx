@@ -272,7 +272,7 @@ export default function DocsPage() {
               <h4 className="font-semibold text-sm">Data Sources</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
-                  <a href="https://github.com/Alf-Anas/batas-administrasi-indonesia" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">Batas Administrasi (BIG)</a>
+                  <a href="https://gis.dukcapil.kemendagri.go.id/peta/" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">Batas Administrasi (Kemendagri 2024)</a>
                 </li>
                 <li>
                   <a href="https://github.com/lokabisa-oss/region-id" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">Kode Wilayah</a>

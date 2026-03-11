@@ -300,7 +300,7 @@ export default function VectorLayerManager({ layerVisibility, onFeatureClick, hi
     const tooltip = new maplibregl.Popup({
       closeButton: false,
       closeOnClick: false,
-      className: "wilayah-tooltip",
+      className: "wilayah-tooltip pointer-events-none",
       offset: 12,
     });
     tooltipRef.current = tooltip;
