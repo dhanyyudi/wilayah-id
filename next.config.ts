@@ -22,6 +22,19 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=60' },
         ],
       },
+      },
+    ];
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'https://wilayah-id-api.dhanypedia.it.com/api/:path*',
+      },
+      {
+        source: '/tiles/:path*',
+        destination: 'https://wilayah-id-api.dhanypedia.it.com/tiles/:path*',
+      },
     ];
   },
 };
