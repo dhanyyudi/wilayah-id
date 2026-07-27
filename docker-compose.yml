@@ -55,6 +55,12 @@ services:
       - MCP_HOST=0.0.0.0
       - MCP_PORT=8000
       - MCP_ALLOWED_HOSTS=127.0.0.1:*,localhost:*,mcp-server:*,wilayah-id-mcp:*
+      - MCP_ARTIFACT_DIR=/tmp/wilayah-mcp-artifacts
+      - MCP_ARTIFACT_TTL_SECONDS=${MCP_ARTIFACT_TTL_SECONDS:-900}
+      - MCP_MAX_GEOMETRY_POINTS=${MCP_MAX_GEOMETRY_POINTS:-50000}
+      - MCP_MAX_SUBSET_FEATURES=${MCP_MAX_SUBSET_FEATURES:-5000}
+      - MCP_MAX_AOI_BYTES=${MCP_MAX_AOI_BYTES:-1048576}
+      - MCP_MAX_ARTIFACT_BYTES=${MCP_MAX_ARTIFACT_BYTES:-52428800}
     ports:
       - "127.0.0.1:${MCP_PORT:-8000}:8000"
     networks:

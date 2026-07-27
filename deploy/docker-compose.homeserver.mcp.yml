@@ -9,6 +9,12 @@ services:
         localhost:*,
         wilayah-id-mcp:*,
         wilayah-id-mcp.dhanypedia.it.com
+      MCP_ARTIFACT_DIR: /tmp/wilayah-mcp-artifacts
+      MCP_ARTIFACT_TTL_SECONDS: 900
+      MCP_MAX_GEOMETRY_POINTS: 50000
+      MCP_MAX_SUBSET_FEATURES: 5000
+      MCP_MAX_AOI_BYTES: 1048576
+      MCP_MAX_ARTIFACT_BYTES: 52428800
     healthcheck:
       test:
         - CMD

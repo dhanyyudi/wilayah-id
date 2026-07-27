@@ -124,32 +124,68 @@ Base URL: `/api/v1`
 
 ## 🤖 Model Context Protocol (MCP)
 
-Wilayah-ID menyediakan MCP server yang dapat dihubungkan ke agent berbasis LLM. Implementasi saat ini mempertahankan lima tool khusus wilayah Indonesia sebagai kontrak kompatibilitas. FastMCP hanya menjadi lapisan transport; validasi dan pembentukan respons berada di service module, sedangkan SQL serta pengetahuan skema berada di adapter PostGIS read-only.
+Wilayah-ID menyediakan MCP server yang dapat dihubungkan ke agent berbasis LLM.
+Tujuh tool utama memakai kosakata spasial generik; nama tabel dan struktur
+administrasi Indonesia disembunyikan di belakang adapter PostGIS read-only.
+FastMCP hanya menjadi adapter transport, sedangkan validasi, provenance, dan
+semantik operasi berada di module yang dapat diuji.
 
-**Tools yang tersedia:**
-- `search_regions`: Pencarian wilayah berdasarkan nama
-- `get_region_details`: Atribut dan hierarki berdasarkan kode wilayah
-- `reverse_geocode`: Mengambil hierarki wilayah dari koordinat (Lat/Lng)
-- `get_top_populated_regions`: Mengurutkan wilayah berdasarkan populasi
-- `get_demographic_summary`: Ringkasan demografis suatu wilayah
+**Tool interoperabilitas spasial (v1):**
 
-Semua query MCP memakai connection pool, transaksi read-only, statement timeout
-5 detik secara default, dan batas hasil. Detail exception basis data dicatat di
-server tetapi tidak dikirimkan kepada pemanggil. Nilai berikut dapat diubah
-melalui environment variable: `MCP_DB_POOL_MIN`, `MCP_DB_POOL_MAX`, dan
-`MCP_STATEMENT_TIMEOUT_MS`.
+- `describe_spatial_service`: menemukan dataset, layer, atribut, operasi,
+  snapshot, lisensi, dan limit;
+- `resolve_spatial_entity`: memetakan nama atau kode ke kandidat `FeatureRef`
+  yang terurut dan menandai ambiguitas;
+- `get_spatial_entity`: mengambil atribut, hierarki, bbox, representative point,
+  dan geometri opsional;
+- `locate_coordinates`: mencari feature yang mencakup koordinat dengan kebijakan
+  `covers` atau `strict_contains`;
+- `relate_spatial_entities`: menghitung topology, DE-9IM, jarak meter, dan arah
+  antara dua feature;
+- `find_related_spatial_entities`: mencari parent, children, neighbors, within,
+  contains, intersects, atau nearest;
+- `extract_spatial_subset`: menyeleksi atau memotong feature berdasarkan bbox,
+  GeoJSON, atau `FeatureRef`, kemudian menghasilkan artefak GeoJSON/GeoPackage.
+
+Lima tool lama—`search_regions`, `get_region_details`, `reverse_geocode`,
+`get_top_populated_regions`, dan `get_demographic_summary`—tetap tersedia sebagai
+compatibility wrappers. Tool tersebut bukan kontrak generik untuk adapter baru.
+
+Tool generik mengembalikan envelope `status`, `data`, dan `meta`. Metadata
+mencakup versi tool, dataset, snapshot, CRS, metode, trace ID, latency,
+provenance, serta warnings. Kesalahan memakai kode stabil dan tidak membocorkan
+SQL atau detail koneksi.
+
+Semua query memakai connection pool, transaksi read-only, statement timeout
+5 detik secara default, dan batas hasil. Geometry entity bersifat opt-in dan
+dibatasi berdasarkan jumlah titik. Spatial subset dibatasi maksimal 5.000
+feature secara default; artefak disimpan sementara selama 15 menit, memiliki
+checksum SHA-256, dibatasi 50 MiB, dan diunduh melalui
+`/artifacts/{artifact_id}/{filename}`. GeoJSON AOI dibatasi 1 MiB.
+
+Konfigurasi dapat diubah melalui `MCP_DB_POOL_MIN`, `MCP_DB_POOL_MAX`,
+`MCP_STATEMENT_TIMEOUT_MS`, `MCP_MAX_GEOMETRY_POINTS`,
+`MCP_MAX_SUBSET_FEATURES`, `MCP_ARTIFACT_DIR`,
+`MCP_ARTIFACT_TTL_SECONDS`, `MCP_MAX_AOI_BYTES`,
+`MCP_MAX_ARTIFACT_BYTES`, dan `MCP_PUBLIC_BASE_URL`. GeoPackage membutuhkan GDAL
+`ogr2ogr`, yang sudah disertakan dalam image MCP.
 
 Snapshot eksperimen yang dikunci untuk baseline MCP adalah geometri batas
 Dukcapil 2024 Semester 1, kode wilayah turunan Kepmendagri 2025, dan data kode
 pos sebagaimana tercantum pada tabel sumber data di bawah. Perbedaan versi
 geometri dan kode harus direkonsiliasi saat membangun ground truth.
 
-Untuk menjalankan test kontrak dan service tanpa basis data:
+Untuk menjalankan test kontrak dan service:
 
 ```bash
 cd mcp
 python -m unittest discover -s tests -v
 ```
+
+Tes adapter PostGIS aktif ketika `TEST_DATABASE_URL` menunjuk ke schema fixture.
+CI membuat schema disposable tersebut, menguji kasus ambiguous name, boundary
+point, hierarchy, adjacency, distance, invalid geometry, dan clipped subset,
+lalu membangun image Docker.
 
 Docker Compose lokal menjalankan Streamable HTTP pada
 `http://127.0.0.1:8000/mcp`. Port hanya di-bind ke loopback. Eksekusi langsung

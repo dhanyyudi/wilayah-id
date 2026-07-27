@@ -48,14 +48,36 @@ jobs:
       - name: Install MCP dependencies
         run: python -m pip install -r mcp/requirements.txt
 
-      - name: Run MCP contract and protocol tests
+      - name: Install PostgreSQL and GDAL clients
+        run: >-
+          sudo apt-get update &&
+          sudo apt-get install -y postgresql-client gdal-bin
+
+      - name: Prepare PostGIS integration schema
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql \
+            --host 127.0.0.1 \
+            --username postgres \
+            --dbname spatial_fixture \
+            --set ON_ERROR_STOP=1 \
+            --command "CREATE EXTENSION IF NOT EXISTS postgis"
+          psql \
+            --host 127.0.0.1 \
+            --username postgres \
+            --dbname spatial_fixture \
+            --set ON_ERROR_STOP=1 \
+            --file mcp/tests/fixtures/wilayah_schema_fixture.sql
+
+      - name: Run MCP contract, protocol, and PostGIS integration tests
         working-directory: mcp
+        env:
+          TEST_DATABASE_URL: >-
+            postgresql://postgres:postgres@127.0.0.1:5432/spatial_fixture?options=-csearch_path%3Dmcp_test%2Cpublic
         run: |
           python -m unittest discover -s tests -v
           python -m compileall server.py wilayah_mcp
-
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
       - name: Run PostGIS predicate fixture
         env:

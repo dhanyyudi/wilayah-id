@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import re
 import unittest
-
+from pathlib import Path
 
 MCP_ROOT = Path(__file__).resolve().parents[1]
 
@@ -17,7 +16,7 @@ class LegacyContractSnapshotTests(unittest.TestCase):
         expected = [tool["name"] for tool in snapshot["tools"]]
         source = (MCP_ROOT / "server.py").read_text()
         actual = re.findall(r"@mcp\.tool\(\)\ndef ([a-z_]+)\(", source)
-        self.assertEqual(actual, expected)
+        self.assertEqual(actual[: len(expected)], expected)
 
     def test_reverse_predicate_is_frozen_for_phase_one(self) -> None:
         source = (MCP_ROOT / "wilayah_mcp/postgis.py").read_text()

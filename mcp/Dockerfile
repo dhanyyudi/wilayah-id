@@ -2,10 +2,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Install GeoPackage conversion support. psycopg2-binary needs no compiler.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq-dev \
-    gcc \
+    gdal-bin \
     && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies natively
