@@ -23,6 +23,13 @@ class LegacyContractSnapshotTests(unittest.TestCase):
         source = (MCP_ROOT / "wilayah_mcp/postgis.py").read_text()
         self.assertIn("ST_Intersects(pt.geom, d.geom)", source)
 
+    def test_village_hierarchy_uses_existing_foreign_keys(self) -> None:
+        source = (MCP_ROOT / "wilayah_mcp/postgis.py").read_text()
+        self.assertNotIn("d.kode_kab", source)
+        self.assertNotIn("d.kode_prov", source)
+        self.assertIn("JOIN kabupaten k ON c.kode_kab = k.kode_kab", source)
+        self.assertIn("JOIN provinsi p ON k.kode_prov = p.kode_prov", source)
+
     def test_data_snapshot_records_version_mismatch_explicitly(self) -> None:
         snapshot = json.loads(
             (MCP_ROOT / "tests/baseline/data_snapshot.json").read_text()

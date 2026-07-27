@@ -46,8 +46,8 @@ UNION ALL
          p.nama_provinsi, k.nama_kabupaten, c.nama_kecamatan
   FROM desa d
   JOIN kecamatan c ON d.kode_kec = c.kode_kec
-  JOIN kabupaten k ON d.kode_kab = k.kode_kab
-  JOIN provinsi p ON d.kode_prov = p.kode_prov
+  JOIN kabupaten k ON c.kode_kab = k.kode_kab
+  JOIN provinsi p ON k.kode_prov = p.kode_prov
   WHERE UPPER(d.nama_desa) LIKE %s
   LIMIT %s
 )
@@ -75,8 +75,8 @@ DETAIL_SQL = {
                pc.kode_pos
         FROM desa d
         JOIN kecamatan c ON d.kode_kec = c.kode_kec
-        JOIN kabupaten k ON d.kode_kab = k.kode_kab
-        JOIN provinsi p ON d.kode_prov = p.kode_prov
+        JOIN kabupaten k ON c.kode_kab = k.kode_kab
+        JOIN provinsi p ON k.kode_prov = p.kode_prov
         LEFT JOIN postal_code pc ON d.kode_desa = pc.kode_desa
         WHERE d.kode_desa = %s
     """,
@@ -94,8 +94,8 @@ SELECT
 FROM pt
 LEFT JOIN desa d ON ST_Intersects(pt.geom, d.geom)
 LEFT JOIN kecamatan c ON d.kode_kec = c.kode_kec
-LEFT JOIN kabupaten k ON d.kode_kab = k.kode_kab
-LEFT JOIN provinsi p ON d.kode_prov = p.kode_prov
+LEFT JOIN kabupaten k ON c.kode_kab = k.kode_kab
+LEFT JOIN provinsi p ON k.kode_prov = p.kode_prov
 LEFT JOIN postal_code pc ON d.kode_desa = pc.kode_desa
 """
 
