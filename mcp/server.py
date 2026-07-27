@@ -1,333 +1,224 @@
-from mcp.server.fastmcp import FastMCP
-import psycopg2
-from psycopg2.extras import RealDictCursor
-import os
-import json
-from typing import Dict, Any, List, Optional
-from dotenv import load_dotenv
+"""Thin FastMCP compatibility adapter for Wilayah-ID."""
 
-# Load environment variables
+from __future__ import annotations
+
+import json
+import logging
+import os
+from time import perf_counter
+from typing import Any, Callable
+from uuid import uuid4
+
+from dotenv import load_dotenv
+from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
+
+from wilayah_mcp.errors import SpatialServiceError
+from wilayah_mcp.postgis import PostgisSpatialRepository
+from wilayah_mcp.service import WilayahSpatialService
+
+
 load_dotenv()
 
-# Create FastMCP server
-mcp = FastMCP("wilayah-id", description="Indonesian Administrative Regions (Wilayah-ID) API")
-
-def get_db_connection():
-    """Create a database connection to the read-only PostgreSQL instance."""
-    # Use the DATABASE_URL environment variable (should point to the read-only user)
-    db_url = os.environ.get("DATABASE_URL")
-    if not db_url:
-        raise ValueError("DATABASE_URL environment variable is required")
-    
-    return psycopg2.connect(db_url, cursor_factory=RealDictCursor)
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+LOGGER = logging.getLogger("wilayah-id-mcp")
 
 
-@mcp.tool()
-async def search_regions(query: str, limit: int = 20) -> List[Dict[str, Any]]:
-    """
-    Search for regions in Indonesia by name.
-    Use this tools to find the required code for a province, district (kabupaten), 
-    subdistrict (kecamatan), or village (desa) if only the name is known.
-    
-    Args:
-        query: The name of the region to search for (e.g., "Jakarta", "Cimahi")
-        limit: Maximum number of results to return (default: 20)
-    """
-    if len(query) < 2:
-        return [{"error": "Search query must be at least 2 characters long."}]
+def _csv_env(name: str) -> list[str]:
+    """Return non-empty comma-separated environment values."""
 
-    search_query = f"%{query.upper()}%"
-    
-    # Same SQL logic as the search API endpoint
-    sql = """
-    (
-      SELECT 'PROVINSI' as tipe, kode_prov as kode, nama_provinsi as nama, 
-             NULL as nama_provinsi, NULL as nama_kabupaten, NULL as nama_kecamatan
-      FROM provinsi WHERE UPPER(nama_provinsi) LIKE %s
-      LIMIT %s
+    return [
+        item.strip()
+        for item in os.getenv(name, "").split(",")
+        if item.strip()
+    ]
+
+
+def _transport() -> str:
+    """Return a supported MCP transport without silently accepting typos."""
+
+    transport = os.getenv("MCP_TRANSPORT", "stdio").strip().lower()
+    if transport not in {"stdio", "sse", "streamable-http"}:
+        raise ValueError(
+            "MCP_TRANSPORT must be stdio, sse, or streamable-http"
+        )
+    return transport
+
+
+def _build_mcp() -> FastMCP:
+    """Build the transport adapter from explicit runtime settings."""
+
+    host = os.getenv("MCP_HOST", "127.0.0.1")
+    port = int(os.getenv("MCP_PORT", "8000"))
+    allowed_hosts = _csv_env("MCP_ALLOWED_HOSTS")
+    allowed_origins = _csv_env("MCP_ALLOWED_ORIGINS")
+
+    if (
+        _transport() != "stdio"
+        and host not in {"127.0.0.1", "localhost", "::1"}
+        and not allowed_hosts
+    ):
+        raise ValueError(
+            "MCP_ALLOWED_HOSTS is required for a non-loopback HTTP listener"
+        )
+
+    transport_security = None
+    if allowed_hosts or allowed_origins:
+        transport_security = TransportSecuritySettings(
+            enable_dns_rebinding_protection=True,
+            allowed_hosts=allowed_hosts,
+            allowed_origins=allowed_origins,
+        )
+
+    return FastMCP(
+        "wilayah-id",
+        instructions="Indonesian Administrative Regions (Wilayah-ID) API",
+        host=host,
+        port=port,
+        streamable_http_path="/mcp",
+        transport_security=transport_security,
     )
-    UNION ALL
-    (
-      SELECT k.tipe, k.kode_kab as kode, k.nama_kabupaten as nama, 
-             p.nama_provinsi, NULL as nama_kabupaten, NULL as nama_kecamatan
-      FROM kabupaten k
-      JOIN provinsi p ON k.kode_prov = p.kode_prov
-      WHERE UPPER(k.nama_kabupaten) LIKE %s
-      LIMIT %s
-    )
-    UNION ALL
-    (
-      SELECT 'KECAMATAN' as tipe, c.kode_kec as kode, c.nama_kecamatan as nama,
-             p.nama_provinsi, k.nama_kabupaten, NULL as nama_kecamatan
-      FROM kecamatan c
-      JOIN kabupaten k ON c.kode_kab = k.kode_kab
-      JOIN provinsi p ON k.kode_prov = p.kode_prov
-      WHERE UPPER(c.nama_kecamatan) LIKE %s
-      LIMIT %s
-    )
-    UNION ALL
-    (
-      SELECT d.tipe, d.kode_desa as kode, d.nama_desa as nama,
-             p.nama_provinsi, k.nama_kabupaten, c.nama_kecamatan
-      FROM desa d
-      JOIN kecamatan c ON d.kode_kec = c.kode_kec
-      JOIN kabupaten k ON d.kode_kab = k.kode_kab
-      JOIN provinsi p ON d.kode_prov = p.kode_prov
-      WHERE UPPER(d.nama_desa) LIKE %s
-      LIMIT %s
-    )
-    ORDER BY tipe DESC, nama ASC
-    LIMIT %s;
-    """
-    
-    conn = get_db_connection()
+
+
+mcp = _build_mcp()
+
+_repository = PostgisSpatialRepository()
+_service = WilayahSpatialService(_repository)
+
+
+def _invoke(
+    operation: str,
+    callback: Callable[[], Any],
+    *,
+    list_response: bool = False,
+) -> Any:
+    """Run one operation with structured logging and caller-safe errors."""
+
+    trace_id = str(uuid4())
+    started = perf_counter()
     try:
-        with conn.cursor() as cur:
-            # Pass the search_query and limit parameters for each union block, plus final limit
-            params = (search_query, limit, search_query, limit, search_query, limit, search_query, limit, limit)
-            cur.execute(sql, params)
-            results = cur.fetchall()
-            return [dict(row) for row in results]
-    except Exception as e:
-        return [{"error": f"Database query failed: {str(e)}"}]
-    finally:
-        conn.close()
-
-
-@mcp.tool()
-async def get_region_details(code: str) -> Dict[str, Any]:
-    """
-    Get detailed information about a specific region (Province, District, Subdistrict, or Village) 
-    using its exact administrative code (`kode`).
-    
-    Args:
-        code: The administrative code (e.g. '31' for Jakarta, '3173' for Jakarta Barat)
-    """
-    if not code or not code.isdigit():
-        return {"error": "Invalid administrative code format."}
-
-    conn = get_db_connection()
-    try:
-        with conn.cursor() as cur:
-            if len(code) == 2:  # Provinsi
-                cur.execute("SELECT * FROM provinsi WHERE kode_prov = %s", (code,))
-                row = cur.fetchone()
-                if not row: return {"error": f"Province with code {code} not found."}
-                
-                # Exclude large geometry column for text output
-                if 'geom' in row: del row['geom']
-                
-                # Get child count
-                cur.execute("SELECT COUNT(*) as count FROM kabupaten WHERE kode_prov = %s", (code,))
-                row['jumlah_kabupaten'] = cur.fetchone()['count']
-                return dict(row)
-                
-            elif len(code) == 4:  # Kabupaten/Kota
-                cur.execute("""
-                    SELECT k.*, p.nama_provinsi 
-                    FROM kabupaten k
-                    JOIN provinsi p ON k.kode_prov = p.kode_prov
-                    WHERE k.kode_kab = %s
-                """, (code,))
-                row = cur.fetchone()
-                if not row: return {"error": f"District with code {code} not found."}
-                if 'geom' in row: del row['geom']
-                return dict(row)
-                
-            elif len(code) == 6:  # Kecamatan
-                cur.execute("""
-                    SELECT c.*, k.nama_kabupaten, p.nama_provinsi 
-                    FROM kecamatan c
-                    JOIN kabupaten k ON c.kode_kab = k.kode_kab
-                    JOIN provinsi p ON c.kode_prov = p.kode_prov
-                    WHERE c.kode_kec = %s
-                """, (code,))
-                row = cur.fetchone()
-                if not row: return {"error": f"Subdistrict with code {code} not found."}
-                if 'geom' in row: del row['geom']
-                return dict(row)
-                
-            elif len(code) == 10:  # Desa/Kelurahan
-                cur.execute("""
-                    SELECT d.*, c.nama_kecamatan, k.nama_kabupaten, p.nama_provinsi, pc.kode_pos
-                    FROM desa d
-                    JOIN kecamatan c ON d.kode_kec = c.kode_kec
-                    JOIN kabupaten k ON d.kode_kab = k.kode_kab
-                    JOIN provinsi p ON d.kode_prov = p.kode_prov
-                    LEFT JOIN postal_code pc ON d.kode_desa = pc.kode_desa
-                    WHERE d.kode_desa = %s
-                """, (code,))
-                row = cur.fetchone()
-                if not row: return {"error": f"Village with code {code} not found."}
-                if 'geom' in row: del row['geom']
-                return dict(row)
-                
-            else:
-                return {"error": "Invalid code length. Expected 2, 4, 6, or 10 digits."}
-                
-    except Exception as e:
-        return {"error": f"Database query failed: {str(e)}"}
-    finally:
-        conn.close()
-
-
-@mcp.tool()
-async def reverse_geocode(lat: float, lng: float) -> Dict[str, Any]:
-    """
-    Find the Indonesian administrative region (Province, District, Subdistrict, Village) 
-    for a given latitude and longitude coordinate.
-    
-    Args:
-        lat: Latitude (e.g., -6.200000)
-        lng: Longitude (e.g., 106.816666)
-    """
-    # Validation based on Indonesia bounding box
-    if not (-11.0 <= lat <= 6.0):
-        return {"error": f"Latitude {lat} is outside Indonesia bounds (-11 to 6)."}
-    if not (95.0 <= lng <= 141.0):
-        return {"error": f"Longitude {lng} is outside Indonesia bounds (95 to 141)."}
-
-    conn = get_db_connection()
-    try:
-        with conn.cursor() as cur:
-            sql = """
-            WITH pt AS (
-              SELECT ST_SetSRID(ST_MakePoint(%s, %s), 4326) AS geom
-            )
-            SELECT
-              p.kode_prov, p.nama_provinsi,
-              k.kode_kab, k.nama_kabupaten, k.tipe as tipe_kab,
-              c.kode_kec, c.nama_kecamatan,
-              d.kode_desa, d.nama_desa, d.tipe as tipe_desa, pc.kode_pos
-            FROM pt
-            LEFT JOIN desa d ON ST_Intersects(pt.geom, d.geom)
-            LEFT JOIN kecamatan c ON d.kode_kec = c.kode_kec
-            LEFT JOIN kabupaten k ON d.kode_kab = k.kode_kab
-            LEFT JOIN provinsi p ON d.kode_prov = p.kode_prov
-            LEFT JOIN postal_code pc ON d.kode_desa = pc.kode_desa;
-            """
-            cur.execute(sql, (lng, lat))
-            row = cur.fetchone()
-            
-            if not row or not row['kode_prov']:
-                return {
-                    "result": "No land boundary found", 
-                    "notes": "Coordinates are within Indonesia bounds but likely over water or border areas."
+        result = callback()
+        LOGGER.info(
+            json.dumps(
+                {
+                    "event": "mcp_operation",
+                    "operation": operation,
+                    "status": "success",
+                    "trace_id": trace_id,
+                    "latency_ms": round((perf_counter() - started) * 1000, 3),
                 }
-                
-            return {
-                "coordinate": {"lat": lat, "lng": lng},
-                "provinsi": {"kode": row['kode_prov'], "nama": row['nama_provinsi']},
-                "kabupaten": {"kode": row['kode_kab'], "nama": row['nama_kabupaten'], "tipe": row['tipe_kab']},
-                "kecamatan": {"kode": row['kode_kec'], "nama": row['nama_kecamatan']},
-                "desa": {"kode": row['kode_desa'], "nama": row['nama_desa'], "tipe": row['tipe_desa'], "kode_pos": row['kode_pos']}
-            }
-    except Exception as e:
-        return {"error": f"Database query failed: {str(e)}"}
-    finally:
-        conn.close()
-
+            )
+        )
+        return result
+    except SpatialServiceError as exc:
+        LOGGER.warning(
+            json.dumps(
+                {
+                    "event": "mcp_operation",
+                    "operation": operation,
+                    "status": "error",
+                    "error_code": exc.code,
+                    "trace_id": trace_id,
+                    "latency_ms": round((perf_counter() - started) * 1000, 3),
+                }
+            ),
+            exc_info=exc.code == "INTERNAL_ERROR",
+        )
+        payload = {"error": exc.public_message}
+        return [payload] if list_response else payload
+    except Exception:
+        LOGGER.exception(
+            json.dumps(
+                {
+                    "event": "mcp_operation",
+                    "operation": operation,
+                    "status": "error",
+                    "error_code": "INTERNAL_ERROR",
+                    "trace_id": trace_id,
+                    "latency_ms": round((perf_counter() - started) * 1000, 3),
+                }
+            )
+        )
+        payload = {"error": "The spatial data service could not complete the request."}
+        return [payload] if list_response else payload
 
 
 @mcp.tool()
-async def get_top_populated_regions(
+def search_regions(query: str, limit: int = 20) -> list[dict[str, Any]]:
+    """Search Indonesian administrative regions by name."""
+
+    return _invoke(
+        "search_regions",
+        lambda: _service.search_regions(query, limit),
+        list_response=True,
+    )
+
+
+@mcp.tool()
+def get_region_details(code: str) -> dict[str, Any]:
+    """Get region attributes and hierarchy from an administrative code."""
+
+    return _invoke(
+        "get_region_details",
+        lambda: _service.get_region_details(code),
+    )
+
+
+@mcp.tool()
+def reverse_geocode(lat: float, lng: float) -> dict[str, Any]:
+    """Find the administrative hierarchy for a latitude and longitude."""
+
+    return _invoke(
+        "reverse_geocode",
+        lambda: _service.reverse_geocode(lat, lng),
+    )
+
+
+@mcp.tool()
+def get_top_populated_regions(
     level: str = "provinsi",
     limit: int = 10,
-    order: str = "desc"
-) -> List[Dict[str, Any]]:
-    """
-    Get regions with the highest or lowest population.
-    
-    Args:
-        level: Administrative level (provinsi, kabupaten, kecamatan, desa). Default: provinsi
-        limit: Number of results to return (max 50). Default: 10
-        order: Sort order - 'desc' for highest populated, 'asc' for lowest. Default: desc
-    """
-    valid_levels = {"provinsi", "kabupaten", "kecamatan", "desa"}
-    if level.lower() not in valid_levels:
-        return [{"error": f"Invalid level. Must be one of: {', '.join(valid_levels)}"}]
-        
-    limit = min(max(1, limit), 50)  # constrain between 1 and 50
-    sort_order = "DESC" if order.lower() == "desc" else "ASC"
-    level = level.lower()
-    
-    conn = get_db_connection()
-    try:
-        with conn.cursor() as cur:
-            if level == "provinsi":
-                sql = f"SELECT kode_prov as kode, nama_provinsi as nama, jumlah_penduduk, jumlah_kk, kepadatan, luas_wilayah FROM provinsi ORDER BY jumlah_penduduk {sort_order} NULLS LAST LIMIT %s"
-            elif level == "kabupaten":
-                sql = f"SELECT kode_kab as kode, nama_kabupaten as nama, tipe, jumlah_penduduk, jumlah_kk, kepadatan, luas_wilayah FROM kabupaten ORDER BY jumlah_penduduk {sort_order} NULLS LAST LIMIT %s"
-            elif level == "kecamatan":
-                sql = f"""SELECT c.kode_kec as kode, c.nama_kecamatan as nama, k.nama_kabupaten, 
-                          c.jumlah_penduduk, c.jumlah_kk, c.kepadatan, c.luas_wilayah 
-                          FROM kecamatan c JOIN kabupaten k ON c.kode_kab = k.kode_kab 
-                          ORDER BY c.jumlah_penduduk {sort_order} NULLS LAST LIMIT %s"""
-            else:  # desa
-                sql = f"""SELECT d.kode_desa as kode, d.nama_desa as nama, c.nama_kecamatan,
-                          d.jumlah_penduduk, d.pulau, d.jangkauan 
-                          FROM desa d JOIN kecamatan c ON d.kode_kec = c.kode_kec 
-                          ORDER BY d.jumlah_penduduk {sort_order} NULLS LAST LIMIT %s"""
-                          
-            cur.execute(sql, (limit,))
-            return [dict(row) for row in cur.fetchall()]
-    except Exception as e:
-        return [{"error": f"Database query failed: {str(e)}"}]
-    finally:
-        conn.close()
+    order: str = "desc",
+) -> list[dict[str, Any]]:
+    """Return regions ordered by population for one administrative level."""
+
+    return _invoke(
+        "get_top_populated_regions",
+        lambda: _service.get_top_populated_regions(level, limit, order),
+        list_response=True,
+    )
 
 
 @mcp.tool()
-async def get_demographic_summary(code: str) -> Dict[str, Any]:
-    """
-    Get an aggregated demographic summary for a specific region.
-    Returns population, households, density, area, and total administrative subdivisions.
-    
-    Args:
-        code: Administrative code (e.g., '31' for Jakarta)
-    """
-    details = await get_region_details(code)
-    
-    if "error" in details:
-        return details
-        
-    summary = {
-        "kode": code,
-    }
-    
-    if len(code) == 2: summary["nama"] = details.get("nama_provinsi")
-    elif len(code) == 4: summary["nama"] = details.get("nama_kabupaten")
-    elif len(code) == 6: summary["nama"] = details.get("nama_kecamatan")
-    elif len(code) == 10: summary["nama"] = details.get("nama_desa")
+def get_demographic_summary(code: str) -> dict[str, Any]:
+    """Return selected demographic attributes for one region."""
 
-    fields = ["jumlah_penduduk", "jumlah_kk", "kepadatan", "luas_wilayah", "area_km2",
-              "jumlah_kab", "jumlah_kota", "jumlah_kec", "jumlah_desa", "jumlah_kel"]
-              
-    for f in fields:
-        if f in details:
-            summary[f] = details[f]
-            
-    return summary
+    return _invoke(
+        "get_demographic_summary",
+        lambda: _service.get_demographic_summary(code),
+    )
 
 
 @mcp.prompt()
 def indonesian_region_assistant() -> str:
     """Prompt for assisting users with Indonesian administrative boundaries."""
-    return """You are a geospatial data assistant specializing in Indonesian administrative boundaries (Wilayah Indonesia).
+
+    return """You are a geospatial data assistant specializing in Indonesian administrative boundaries.
 
 When helping users:
-1. Use `search_regions` to find the administrative codes for names like "Jakarta", "Bandung", etc.
-2. Use `get_region_details` to pull demographics and exact hierarchies based on the codes you found.
-3. Use `get_top_populated_regions` to answer queries about the most/least populated areas.
-4. Use `get_demographic_summary` when the user asks for a high-level statistical overview of a region.
-5. Use `reverse_geocode` when users provide GPS coordinates to tell them exactly which village/district they are in.
+1. Use `search_regions` to resolve region names to administrative codes.
+2. Use `get_region_details` for attributes and hierarchy.
+3. Use `get_top_populated_regions` for population rankings.
+4. Use `get_demographic_summary` for a concise statistical overview.
+5. Use `reverse_geocode` for coordinates.
 
-Important Context:
-- The data source is Dukcapil 2024 (Semester 1).
-- The hierarchy is: Provinsi (Province, 2 digits) → Kabupaten/Kota (District/City, 4 digits) → Kecamatan (Subdistrict, 6 digits) → Kelurahan/Desa (Village, 10 digits).
-- The `DATABASE_URL` configured for these tools connects using a read-only database user. Data modification requests will not work and should not be attempted.
+Important context:
+- Boundary geometry is based on the Dukcapil 2024 Semester 1 snapshot.
+- Region codes are reconciled with the Kepmendagri 2025-derived dataset.
+- The hierarchy is Provinsi (2 digits), Kabupaten/Kota (4), Kecamatan (6), and Desa/Kelurahan (10).
+- The configured database role is read-only; do not attempt data modification.
 """
 
+
 if __name__ == "__main__":
-    # Run the FastMCP server on stdio by default
-    mcp.run()
+    mcp.run(transport=_transport())

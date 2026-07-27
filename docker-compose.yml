@@ -48,12 +48,27 @@ services:
     environment:
       # Use the read-only user for MCP
       - DATABASE_URL=postgresql://${POSTGRES_READER_USER:-wilayah_reader}:${POSTGRES_READER_PASSWORD:-wilayah_reader_secret}@db:5432/${POSTGRES_DB:-wilayah_id}
+      - MCP_DB_POOL_MIN=${MCP_DB_POOL_MIN:-1}
+      - MCP_DB_POOL_MAX=${MCP_DB_POOL_MAX:-5}
+      - MCP_STATEMENT_TIMEOUT_MS=${MCP_STATEMENT_TIMEOUT_MS:-5000}
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8000
+      - MCP_ALLOWED_HOSTS=127.0.0.1:*,localhost:*,mcp-server:*,wilayah-id-mcp:*
+    ports:
+      - "127.0.0.1:${MCP_PORT:-8000}:8000"
     networks:
       - private_network
     depends_on:
       db:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8000), 2).close()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   pgwatch2:
     image: cybertec/pgwatch2:latest

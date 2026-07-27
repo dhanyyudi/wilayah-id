@@ -124,26 +124,46 @@ Base URL: `/api/v1`
 
 ## 🤖 Model Context Protocol (MCP)
 
-Wilayah-ID menyediakan MCP server publik yang bisa dihubungkan ke Agentic LLMs (Claude Desktop, Cursor, dll). MCP Server ini memberikan AI Anda kemampuan untuk melakukan lookup administrasi wilayah Indonesia dan reverse geocoding.
+Wilayah-ID menyediakan MCP server yang dapat dihubungkan ke agent berbasis LLM. Implementasi saat ini mempertahankan lima tool khusus wilayah Indonesia sebagai kontrak kompatibilitas. FastMCP hanya menjadi lapisan transport; validasi dan pembentukan respons berada di service module, sedangkan SQL serta pengetahuan skema berada di adapter PostGIS read-only.
 
 **Tools yang tersedia:**
 - `search_regions`: Pencarian wilayah berdasarkan nama
-- `get_region_details`: Detail demografis berdasarkan kode wilayah (BPS)
+- `get_region_details`: Atribut dan hierarki berdasarkan kode wilayah
 - `reverse_geocode`: Mengambil hierarki wilayah dari koordinat (Lat/Lng)
+- `get_top_populated_regions`: Mengurutkan wilayah berdasarkan populasi
+- `get_demographic_summary`: Ringkasan demografis suatu wilayah
+
+Semua query MCP memakai connection pool, transaksi read-only, statement timeout
+5 detik secara default, dan batas hasil. Detail exception basis data dicatat di
+server tetapi tidak dikirimkan kepada pemanggil. Nilai berikut dapat diubah
+melalui environment variable: `MCP_DB_POOL_MIN`, `MCP_DB_POOL_MAX`, dan
+`MCP_STATEMENT_TIMEOUT_MS`.
+
+Snapshot eksperimen yang dikunci untuk baseline MCP adalah geometri batas
+Dukcapil 2024 Semester 1, kode wilayah turunan Kepmendagri 2025, dan data kode
+pos sebagaimana tercantum pada tabel sumber data di bawah. Perbedaan versi
+geometri dan kode harus direkonsiliasi saat membangun ground truth.
+
+Untuk menjalankan test kontrak dan service tanpa basis data:
+
+```bash
+cd mcp
+python -m unittest discover -s tests -v
+```
+
+Docker Compose lokal menjalankan Streamable HTTP pada
+`http://127.0.0.1:8000/mcp`. Port hanya di-bind ke loopback. Eksekusi langsung
+`python mcp/server.py` tetap memakai `stdio` secara default. Konfigurasi runtime
+tersedia melalui `MCP_TRANSPORT`, `MCP_HOST`, `MCP_PORT`,
+`MCP_ALLOWED_HOSTS`, dan `MCP_ALLOWED_ORIGINS`.
 
 ### Cara menghubungkan di Claude Desktop / Cursor:
-Tambahkan config berikut ke file `claude_desktop_config.json` Anda:
 
-```json
-{
-  "mcpServers": {
-    "wilayah-id-mcp": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/inspector", "https://wilayah-id-mcp.dhanypedia.it.com/sse"]
-    }
-  }
-}
-```
+Gunakan URL Streamable HTTP yang sesuai dengan lingkungan klien. Untuk
+pengembangan lokal: `http://127.0.0.1:8000/mcp`. Deployment homeserver dan
+gerbang publik dijelaskan di
+[`docs/MCP_DEPLOYMENT.md`](docs/MCP_DEPLOYMENT.md). Endpoint publik tidak boleh
+diaktifkan tanpa autentikasi atau pembatasan trafik yang sesuai.
 
 ## 🛠️ Tech Stack
 

@@ -10,16 +10,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install python dependencies natively
 COPY requirements.txt .
-
-# Since we're using the standard mcp package now
-RUN echo "mcp\npsycopg2-binary\npydantic\npython-dotenv" > requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy server application
 COPY server.py .
+COPY wilayah_mcp ./wilayah_mcp
 
-# Expose standard port for SSE if needed, though typically FastMCP runs on stdio
-# By default, FastMCP runs on stdio.
-# The user will likely run it like `docker exec -i ... python server.py`
-# Or we can serve it via SSE
+# Streamable HTTP deployments listen on this internal container port.
+EXPOSE 8000
+
+# The transport is selected explicitly with MCP_TRANSPORT.
 CMD ["python", "server.py"]

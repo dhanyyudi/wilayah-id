@@ -1,0 +1,38 @@
+{
+  "snapshot_id": "wilayah-id-baseline-2026-07-27",
+  "captured_on": "2026-07-27",
+  "crs": "EPSG:4326",
+  "components": [
+    {
+      "role": "administrative_geometry",
+      "source": "Ditjen Dukcapil Kemendagri",
+      "source_snapshot": "2024 Semester 1",
+      "repository_importer": "etl/import_dukcapil.py",
+      "expected_records": {
+        "provinsi": 38,
+        "kabupaten": 514,
+        "kecamatan": 7285,
+        "desa": 83762
+      }
+    },
+    {
+      "role": "region_codes",
+      "source": "nicnocquee/region-id",
+      "source_snapshot": "Kepmendagri 2025-derived",
+      "expected_records": 91248
+    },
+    {
+      "role": "postal_codes",
+      "source": "nicnocquee/postal-code-id",
+      "source_snapshot": "repository snapshot imported by the current ETL",
+      "expected_records": 77721
+    }
+  ],
+  "content_hash_status": "unavailable_in_checkout",
+  "ground_truth_status": "requires_geometry_code_version_reconciliation",
+  "notes": [
+    "Source archives and the live database are not present in this checkout.",
+    "Record counts are the repository baseline documented in README.md.",
+    "A benchmark release must add source file and database extract hashes."
+  ]
+}

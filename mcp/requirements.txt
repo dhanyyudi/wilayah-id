@@ -1,5 +1,4 @@
-fastmcp
-psycopg2-binary
-pydantic
-python-dotenv
-
+mcp>=1.28,<2
+psycopg2-binary>=2.9,<3
+pydantic>=2.0,<3
+python-dotenv>=1.0,<2

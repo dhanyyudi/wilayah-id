@@ -1,0 +1,42 @@
+{
+  "contract_version": "legacy-v1",
+  "captured_on": "2026-07-27",
+  "tools": [
+    {
+      "name": "search_regions",
+      "parameters": {"query": "string", "limit": "integer=20"},
+      "success_shape": "array<region>",
+      "error_shape": "array<{error:string}>"
+    },
+    {
+      "name": "get_region_details",
+      "parameters": {"code": "string"},
+      "success_shape": "region",
+      "error_shape": "{error:string}"
+    },
+    {
+      "name": "reverse_geocode",
+      "parameters": {"lat": "number", "lng": "number"},
+      "success_shape": "{coordinate,provinsi,kabupaten,kecamatan,desa}",
+      "empty_shape": "{result,notes}",
+      "error_shape": "{error:string}",
+      "predicate": "ST_Intersects"
+    },
+    {
+      "name": "get_top_populated_regions",
+      "parameters": {
+        "level": "string=provinsi",
+        "limit": "integer=10",
+        "order": "string=desc"
+      },
+      "success_shape": "array<region>",
+      "error_shape": "array<{error:string}>"
+    },
+    {
+      "name": "get_demographic_summary",
+      "parameters": {"code": "string"},
+      "success_shape": "{kode,nama,...available_demographic_fields}",
+      "error_shape": "{error:string}"
+    }
+  ]
+}
