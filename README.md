@@ -60,7 +60,10 @@ pnpm build:cf
 pnpm exec wrangler deploy --dry-run
 docker build -t wilayah-id:phase-1 .
 docker run --rm -d --name wilayah-id-phase-1 -p 3100:3000 wilayah-id:phase-1
-curl --fail --silent http://127.0.0.1:3100/api/health
+health_json=$(curl --fail --silent http://127.0.0.1:3100/api/health)
+printf '%s\n' "${health_json}"
+test "$(printf '%s' "${health_json}" | node -p \
+  'JSON.parse(require("fs").readFileSync(0, "utf8")).status')" = "ok"
 docker stop wilayah-id-phase-1
 ```
 

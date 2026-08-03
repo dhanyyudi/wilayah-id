@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      skip_container:
+        description: Skip the validation container when the caller publishes it
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: web-ci-${{ github.workflow }}-${{ github.ref }}
@@ -53,6 +60,7 @@ jobs:
         run: pnpm exec wrangler deploy --dry-run
 
   build-container:
+    if: inputs.skip_container != true
     needs: verify-web
     runs-on: ubuntu-latest
     steps:
