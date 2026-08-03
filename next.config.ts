@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  serverExternalPackages: ['pg', 'pg-cloudflare'],
   poweredByHeader: false,
   images: {
     unoptimized: true,
