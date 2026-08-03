@@ -1,0 +1,366 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Wilayah-ID OGC API Features",
+    "description": "OGC API Features (Core + GeoJSON) access to Indonesian administrative boundaries: provinces, regencies, districts, and villages. Geometry is served in CRS84 with 6-decimal precision.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "/api/v1/ogc/features"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "getLandingPage",
+        "summary": "Landing page",
+        "parameters": [{ "$ref": "#/components/parameters/f" }],
+        "responses": {
+          "200": {
+            "description": "Landing page with links to the API definition, conformance declaration, and collections.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/landingPage" } },
+              "text/html": { "schema": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "/conformance": {
+      "get": {
+        "operationId": "getConformance",
+        "summary": "Conformance classes implemented by this service",
+        "parameters": [{ "$ref": "#/components/parameters/f" }],
+        "responses": {
+          "200": {
+            "description": "List of conformance class URIs.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/conformance" } },
+              "text/html": { "schema": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "/api": {
+      "get": {
+        "operationId": "getApiDescription",
+        "summary": "This OpenAPI 3.0 document",
+        "parameters": [{ "$ref": "#/components/parameters/f" }],
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.0 service description.",
+            "content": {
+              "application/vnd.oai.openapi+json;version=3.0": { "schema": { "type": "object" } },
+              "text/html": { "schema": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "/collections": {
+      "get": {
+        "operationId": "getCollections",
+        "summary": "Feature collections offered by this service",
+        "parameters": [{ "$ref": "#/components/parameters/f" }],
+        "responses": {
+          "200": {
+            "description": "The four administrative collections: provinces, regencies, districts, villages.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/collections" } },
+              "text/html": { "schema": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "/collections/{collectionId}": {
+      "get": {
+        "operationId": "getCollection",
+        "summary": "Metadata about one collection",
+        "parameters": [
+          { "$ref": "#/components/parameters/collectionId" },
+          { "$ref": "#/components/parameters/f" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Collection metadata.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/collection" } },
+              "text/html": { "schema": { "type": "string" } }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/collections/{collectionId}/items": {
+      "get": {
+        "operationId": "getFeatures",
+        "summary": "Features of a collection as a GeoJSON FeatureCollection",
+        "parameters": [
+          { "$ref": "#/components/parameters/collectionId" },
+          { "$ref": "#/components/parameters/bbox" },
+          { "$ref": "#/components/parameters/limit" },
+          { "$ref": "#/components/parameters/offset" },
+          { "$ref": "#/components/parameters/properties" },
+          { "$ref": "#/components/parameters/crs" },
+          { "$ref": "#/components/parameters/f" }
+        ],
+        "responses": {
+          "200": {
+            "description": "GeoJSON FeatureCollection with numberMatched, numberReturned, timeStamp, and RFC 8288 paging links.",
+            "content": {
+              "application/geo+json": { "schema": { "$ref": "#/components/schemas/featureCollection" } },
+              "text/html": { "schema": { "type": "string" } }
+            }
+          },
+          "400": { "$ref": "#/components/responses/InvalidParameter" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/collections/{collectionId}/items/{featureId}": {
+      "get": {
+        "operationId": "getFeature",
+        "summary": "A single feature of a collection",
+        "parameters": [
+          { "$ref": "#/components/parameters/collectionId" },
+          { "$ref": "#/components/parameters/featureId" },
+          { "$ref": "#/components/parameters/f" }
+        ],
+        "responses": {
+          "200": {
+            "description": "GeoJSON Feature.",
+            "content": {
+              "application/geo+json": { "schema": { "$ref": "#/components/schemas/feature" } },
+              "text/html": { "schema": { "type": "string" } }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "collectionId": {
+        "name": "collectionId",
+        "in": "path",
+        "required": true,
+        "description": "Local identifier of a collection.",
+        "schema": {
+          "type": "string",
+          "enum": ["provinces", "regencies", "districts", "villages"]
+        }
+      },
+      "featureId": {
+        "name": "featureId",
+        "in": "path",
+        "required": true,
+        "description": "Local identifier of a feature (the administrative region code).",
+        "schema": { "type": "string" }
+      },
+      "bbox": {
+        "name": "bbox",
+        "in": "query",
+        "required": false,
+        "description": "Bounding box in CRS84 axis order: minLon,minLat,maxLon,maxLat. Features are selected with ST_Intersects against this envelope.",
+        "schema": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": { "type": "number" }
+        },
+        "style": "form",
+        "explode": false
+      },
+      "limit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Maximum number of features returned per page.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 10
+        }
+      },
+      "offset": {
+        "name": "offset",
+        "in": "query",
+        "required": false,
+        "description": "Zero-based index of the first feature in the page.",
+        "schema": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        }
+      },
+      "properties": {
+        "name": "properties",
+        "in": "query",
+        "required": false,
+        "description": "Comma-separated list of non-geometry attribute columns to include. The collection id and name columns are always included.",
+        "schema": { "type": "string" }
+      },
+      "crs": {
+        "name": "crs",
+        "in": "query",
+        "required": false,
+        "description": "Response coordinate reference system. Only CRS84 is offered; any other value is rejected.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "CRS84",
+            "OGC:CRS84",
+            "urn:ogc:def:crs:OGC:1.3:CRS84",
+            "http://www.opengis.net/def/crs/OGC/1.3/CRS84"
+          ],
+          "default": "CRS84"
+        }
+      },
+      "f": {
+        "name": "f",
+        "in": "query",
+        "required": false,
+        "description": "Requested representation. Overrides the Accept header.",
+        "schema": {
+          "type": "string",
+          "enum": ["json", "geojson", "html"]
+        }
+      }
+    },
+    "responses": {
+      "NotFound": {
+        "description": "The requested collection or feature does not exist.",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/exception" } }
+        }
+      },
+      "InvalidParameter": {
+        "description": "A parameter is malformed, out of range, or not supported. Unsupported parameters are rejected, never silently ignored.",
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/exception" } }
+        }
+      }
+    },
+    "schemas": {
+      "link": {
+        "type": "object",
+        "required": ["rel", "href"],
+        "properties": {
+          "rel": { "type": "string" },
+          "href": { "type": "string", "format": "uri" },
+          "type": { "type": "string" },
+          "title": { "type": "string" }
+        }
+      },
+      "landingPage": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "links": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/link" }
+          }
+        }
+      },
+      "conformance": {
+        "type": "object",
+        "required": ["conformsTo"],
+        "properties": {
+          "conformsTo": {
+            "type": "array",
+            "items": { "type": "string", "format": "uri" }
+          }
+        }
+      },
+      "collections": {
+        "type": "object",
+        "properties": {
+          "links": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/link" }
+          },
+          "collections": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/collection" }
+          }
+        }
+      },
+      "collection": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "itemType": { "type": "string", "enum": ["feature"] },
+          "crs": {
+            "type": "array",
+            "items": { "type": "string", "format": "uri" }
+          },
+          "storageCrs": { "type": "string", "format": "uri" },
+          "extent": { "type": "object" },
+          "links": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/link" }
+          }
+        }
+      },
+      "featureCollection": {
+        "type": "object",
+        "required": ["type", "features"],
+        "properties": {
+          "type": { "type": "string", "enum": ["FeatureCollection"] },
+          "features": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/feature" }
+          },
+          "numberMatched": { "type": "integer" },
+          "numberReturned": { "type": "integer" },
+          "timeStamp": { "type": "string", "format": "date-time" },
+          "links": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/link" }
+          }
+        }
+      },
+      "feature": {
+        "type": "object",
+        "required": ["type", "geometry", "properties"],
+        "properties": {
+          "type": { "type": "string", "enum": ["Feature"] },
+          "id": { "type": "string" },
+          "geometry": { "type": "object" },
+          "properties": { "type": "object" },
+          "links": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/link" }
+          }
+        }
+      },
+      "exception": {
+        "type": "object",
+        "required": ["code"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "MissingParameterValue",
+              "InvalidParameterValue",
+              "InvalidValue",
+              "NotFound",
+              "NoApplicableCode"
+            ]
+          },
+          "description": { "type": "string" },
+          "locator": { "type": "string" }
+        }
+      }
+    }
+  }
+}
