@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import type { Feature } from "geojson";
 import type { LngLatBounds } from "maplibre-gl";
+import { serializeCSV } from "@/lib/csv-utils";
 
 interface DownloadPanelProps {
   className?: string;
@@ -35,12 +36,6 @@ type DownloadRecord = Record<string, unknown>;
 
 interface RegionsResponse {
   data?: DownloadRecord[];
-}
-
-function formatCSVValue(value: unknown): string {
-  if (value === null || value === undefined) return "";
-  const text = String(value);
-  return text.includes(",") ? `"${text}"` : text;
 }
 
 // Calculate AOI size in square degrees (rough estimation)
@@ -189,15 +184,7 @@ export default function DownloadPanel({
           // Convert to CSV
           const items = data.data ?? [];
           if (items.length > 0) {
-            const headers = Object.keys(items[0]).filter(h => h !== "geom" && h !== "geometry");
-            const csv = [
-              headers.join(","),
-              ...items.map((item) =>
-                headers.map(h => {
-                  return formatCSVValue(item[h]);
-                }).join(",")
-              ),
-            ].join("\n");
+            const csv = serializeCSV(items);
             
             const blob = new Blob([csv], { type: "text/csv" });
             const url = URL.createObjectURL(blob);

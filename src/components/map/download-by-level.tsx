@@ -5,6 +5,7 @@ import type { Feature, FeatureCollection, Geometry } from "geojson";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { serializeCSV } from "@/lib/csv-utils";
 import { 
   Download, 
   FileJson, 
@@ -33,12 +34,6 @@ interface DownloadResponse extends DownloadRecord {
   type?: string;
   data?: DownloadRecord | DownloadRecord[];
   features?: DownloadFeature[];
-}
-
-function formatCSVValue(value: unknown): string {
-  if (value === null || value === undefined) return "";
-  const text = String(value);
-  return text.includes(",") ? `"${text}"` : text;
 }
 
 const PROVINCES = [
@@ -237,15 +232,7 @@ export default function DownloadByLevel({ className }: DownloadByLevelProps) {
         }
         
         if (items.length > 0) {
-          const headers = Object.keys(items[0]).filter(h => h !== "geom" && h !== "geometry");
-          const csv = [
-            headers.join(","),
-            ...items.map((item) =>
-              headers.map(h => {
-                return formatCSVValue(item[h]);
-              }).join(",")
-            ),
-          ].join("\n");
+          const csv = serializeCSV(items);
           
           const blob = new Blob([csv], { type: "text/csv" });
           const url = URL.createObjectURL(blob);
