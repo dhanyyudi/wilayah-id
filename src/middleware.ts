@@ -3,6 +3,10 @@ import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
+
+  if (url.pathname === '/api/health') {
+    return NextResponse.next()
+  }
   
   // Proxy API requests to the homeserver
   if (url.pathname.startsWith('/api/')) {
