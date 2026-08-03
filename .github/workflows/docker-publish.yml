@@ -66,8 +66,10 @@ jobs:
           set -euo pipefail
 
           health_port=$((20000 + GITHUB_RUN_ID % 20000))
+          health_headers="$(mktemp)"
           cleanup() {
             docker rm -f "${HEALTH_CONTAINER}" >/dev/null 2>&1 || true
+            rm -f "${health_headers}"
           }
           trap cleanup EXIT
           trap 'exit 130' INT
@@ -84,11 +86,13 @@ jobs:
             if health_json=$(curl \
               --connect-timeout 1 \
               --max-time 2 \
+              --dump-header "${health_headers}" \
               --fail --silent --show-error \
               "http://127.0.0.1:${health_port}/api/health" 2>/dev/null); then
               if health_status=$(printf '%s' "${health_json}" | python3 -c \
                 'import json,sys; print(json.load(sys.stdin).get("status", ""))') && \
-                test "${health_status}" = "ok"; then
+                test "${health_status}" = "ok" && \
+                grep -qi '^cache-control:.*no-store' "${health_headers}"; then
                 break
               fi
             fi
@@ -102,6 +106,7 @@ jobs:
 
           printf 'health_port=%s health=%s\n' "${health_port}" "${health_json}"
           test "${health_status}" = "ok"
+          grep -qi '^cache-control:.*no-store' "${health_headers}"
 
       - name: Log into registry ${{ env.REGISTRY }}
         uses: docker/login-action@v3

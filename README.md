@@ -10,7 +10,7 @@ REST API & Webmap interaktif untuk batas administrasi Indonesia: **38 provinsi, 
 ## ✨ Features
 
 - **REST API** — 22 endpoints untuk query wilayah, kode pos, batas (GeoJSON), reverse geocode, OGC WMS/WFS
-- **Vector Tiles** — 4 layer MVT (.pbf) via Tippecanoe, served statik dari Vercel CDN
+- **Vector Tiles** — 4 layer MVT (.pbf) via Tippecanoe, served statik dari homeserver origin di belakang Cloudflare
 - **Webmap Interaktif** — MapLibre GL JS v5 via [mapcn](https://mapcn.dev), dark/light mode
 - **OGC Compliant** — WMS 1.3.0 (GetCapabilities, GetMap, GetFeatureInfo) + WFS 2.0 (GetFeature, DescribeFeatureType)
 - **MCP Server** — Integrasi langsung dengan Claude Desktop / Cursor Server via Model Context Protocol (FastMCP)
@@ -46,7 +46,8 @@ pnpm dev
 ## ✅ Web verification and health
 
 The web health endpoint is `GET /api/health`. A healthy process returns HTTP
-200 with a JSON body whose `status` value is `ok`.
+200, a JSON body whose `status` value is `ok`, and a `Cache-Control` header
+containing `no-store`.
 
 Run the complete web release gate before publishing a container:
 
@@ -55,8 +56,9 @@ Run the complete web release gate before publishing a container:
   set -euo pipefail
 
   image_name="wilayah-id:phase-1"
-  container_name="wilayah-id-phase-1-health-$$"
-  health_port=$((20000 + $$ % 20000))
+  container_name="wilayah-id-phase-1-health-$BASHPID"
+  health_port=$((20000 + BASHPID % 20000))
+  health_headers="$(mktemp)"
 
   if docker container inspect "${container_name}" >/dev/null 2>&1; then
     printf 'Refusing to replace existing container %s\n' \
@@ -66,6 +68,7 @@ Run the complete web release gate before publishing a container:
 
   cleanup() {
     docker rm -f "${container_name}" >/dev/null 2>&1 || true
+    rm -f "${health_headers}"
   }
   trap cleanup EXIT
   trap 'exit 130' INT
@@ -76,6 +79,7 @@ Run the complete web release gate before publishing a container:
   pnpm typecheck
   pnpm test
   pnpm build
+  pnpm verify:runtime
   pnpm build:cf
   pnpm exec wrangler deploy --dry-run
   docker build --tag "${image_name}" .
@@ -90,11 +94,13 @@ Run the complete web release gate before publishing a container:
     if health_json=$(curl \
       --connect-timeout 1 \
       --max-time 2 \
+      --dump-header "${health_headers}" \
       --fail --silent --show-error \
       "http://127.0.0.1:${health_port}/api/health" 2>/dev/null); then
       if health_status=$(printf '%s' "${health_json}" | node -p \
         'JSON.parse(require("fs").readFileSync(0, "utf8")).status') && \
-        test "${health_status}" = "ok"; then
+        test "${health_status}" = "ok" && \
+        grep -qi '^cache-control:.*no-store' "${health_headers}"; then
         break
       fi
     fi
@@ -108,11 +114,12 @@ Run the complete web release gate before publishing a container:
 
   printf 'health_port=%s health=%s\n' "${health_port}" "${health_json}"
   test "${health_status}" = "ok"
+  grep -qi '^cache-control:.*no-store' "${health_headers}"
 )
 ```
 
 Each loopback request has a one-second connection timeout and a two-second
-total timeout. With 30 attempts and one-second intervals, the readiness phase
+total timeout. With 30 attempts and one-second intervals, the health-probe phase
 has a wall-clock bound of less than 90 seconds. The subshell keeps fail-fast
 options, variables, functions, and traps isolated from the caller.
 
@@ -129,7 +136,7 @@ Regional and OGC API base URL: `/api/v1`. The health endpoint remains
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/health` | Process health and dependency-independent readiness |
+| GET | `/api/health` | Process health and dependency-independent liveness |
 
 ### Regions
 

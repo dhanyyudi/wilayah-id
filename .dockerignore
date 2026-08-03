@@ -14,6 +14,11 @@ coverage
 # Local configuration and secrets
 .env*
 !.env.example
+.dev.vars*
+.secrets
+*.pem
+.wrangler
+.vercel
 
 # Logs and package-manager diagnostics
 *.log

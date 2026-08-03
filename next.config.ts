@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: '/api/:path*',
+        source: '/api/v1/:path*',
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Cache-Control', value: 'public, max-age=60' },

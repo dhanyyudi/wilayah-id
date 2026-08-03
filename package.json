@@ -17,7 +17,8 @@
     "types:cf": "wrangler types --env-interface CloudflareEnv --include-runtime false cloudflare-env.d.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "verify:runtime": "node scripts/verify-web-runtime.mjs"
   },
   "dependencies": {
     "@mapbox/mapbox-gl-draw": "^1.5.1",
