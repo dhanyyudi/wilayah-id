@@ -82,6 +82,50 @@ const WFS_PROTOCOL_PARAMS = new Set([
   'filter_language',
 ]);
 
+/** Parameter names valid on every WFS request. FILTER is "known" here so it
+ * reaches the dedicated OperationNotSupported rejection instead of the
+ * generic unsupported-parameter one. */
+const COMMON_REQUEST_PARAMS = [
+  'service',
+  'request',
+  'version',
+  'filter',
+  'filter_language',
+] as const;
+
+/**
+ * Allowed parameter names per implemented request, checked in GET before
+ * dispatch so unsupported input is rejected for every operation and never
+ * silently ignored. For GetFeature the feature-level names (bbox, limit,
+ * offset, properties, crs, datetime) are whitelisted here and
+ * value-validated by the shared parseFeatureQuery in the handler.
+ */
+const ALLOWED_PARAMS_BY_REQUEST: Record<string, readonly string[]> = {
+  GETCAPABILITIES: COMMON_REQUEST_PARAMS,
+  DESCRIBEFEATURETYPE: [
+    ...COMMON_REQUEST_PARAMS,
+    'typename',
+    'typenames',
+    'outputformat',
+  ],
+  GETFEATURE: [
+    ...COMMON_REQUEST_PARAMS,
+    'typename',
+    'typenames',
+    'outputformat',
+    'maxfeatures',
+    'count',
+    'startindex',
+    'srsname',
+    'bbox',
+    'limit',
+    'offset',
+    'properties',
+    'crs',
+    'datetime',
+  ],
+};
+
 let repository: OgcRepository | undefined;
 
 /** Lazily created shared repository; replaced by tests via module mock. */
@@ -133,7 +177,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    switch (requestType.toUpperCase()) {
+    // Reject any parameter the requested operation does not implement,
+    // before dispatch, so nothing is silently ignored. Unknown request
+    // types fall through to the OperationNotSupported report below.
+    const normalizedRequest = requestType.toUpperCase();
+    const allowedParams = ALLOWED_PARAMS_BY_REQUEST[normalizedRequest];
+    if (allowedParams) {
+      const allowed = new Set(allowedParams);
+      for (const key of searchParams.keys()) {
+        if (!allowed.has(key.toLowerCase())) {
+          throw invalidParameterValue(
+            key,
+            `Unsupported parameter "${key}" for ${normalizedRequest} requests`,
+          );
+        }
+      }
+    }
+
+    switch (normalizedRequest) {
       case 'GETCAPABILITIES':
         return handleGetCapabilities(request);
 

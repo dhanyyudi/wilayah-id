@@ -384,6 +384,26 @@ describe("WFS GetFeature strict parameter handling", () => {
     expect(mocks.listFeatures).not.toHaveBeenCalled();
   });
 
+  it("rejects unsupported parameters on GetCapabilities", async () => {
+    const response = await GET(
+      req("?service=WFS&request=GetCapabilities&bogus=1"),
+    );
+    expect(response.status).toBe(400);
+    const doc = await parseXml(response);
+    expectExceptionReport(doc, "InvalidParameterValue", "bogus");
+  });
+
+  it("rejects unsupported parameters on DescribeFeatureType", async () => {
+    const response = await GET(
+      req(
+        "?service=WFS&request=DescribeFeatureType&typename=provinces&bogus=1",
+      ),
+    );
+    expect(response.status).toBe(400);
+    const doc = await parseXml(response);
+    expectExceptionReport(doc, "InvalidParameterValue", "bogus");
+  });
+
   it("rejects an unknown type name", async () => {
     const response = await GET(
       req("?service=WFS&request=GetFeature&typename=planets"),
