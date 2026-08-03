@@ -43,9 +43,41 @@ python etl/generate_tiles.py
 pnpm dev
 ```
 
+## ✅ Web verification and health
+
+The web health endpoint is `GET /api/health`. A healthy process returns HTTP
+200 with a JSON body whose `status` value is `ok`.
+
+Run the complete web release gate before publishing a container:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm build:cf
+pnpm exec wrangler deploy --dry-run
+docker build -t wilayah-id:phase-1 .
+docker run --rm -d --name wilayah-id-phase-1 -p 3100:3000 wilayah-id:phase-1
+curl --fail --silent http://127.0.0.1:3100/api/health
+docker stop wilayah-id-phase-1
+```
+
+The Wrangler command validates the Cloudflare bundle only. Cloudflare Worker
+deployment is handled separately by Workers Builds and is not performed by
+GitHub Actions.
+
 ## 📡 API Endpoints
 
-Base URL: `/api/v1`
+Regional and OGC API base URL: `/api/v1`. The health endpoint remains
+`/api/health`.
+
+### Health
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Process health and dependency-independent readiness |
 
 ### Regions
 
