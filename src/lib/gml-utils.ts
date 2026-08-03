@@ -23,9 +23,17 @@ type XMLBuilder = ReturnType<typeof create>;
 
 /**
  * Generate GML 3.2 FeatureCollection from GeoJSON
+ *
+ * Paging counts (numberMatched/numberReturned) are taken from the
+ * collection when present so paged responses report truthful totals
+ * instead of the page size. Coordinates are longitude/latitude, so the
+ * envelope declares the CRS84 URN rather than the lat/lon EPSG:4326 URN.
  */
 export function geoJSONToGML(
-  geojson: GMLFeatureCollection,
+  geojson: GMLFeatureCollection & {
+    numberMatched?: number;
+    numberReturned?: number;
+  },
   featureType: string,
   namespace = 'http://wilayah.id/wfs'
 ): string {
@@ -37,14 +45,14 @@ export function geoJSONToGML(
     .att('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance')
     .att('xmlns:app', namespace)
     .att('xsi:schemaLocation', 'http://www.opengis.net/wfs/2.0 http://schemas.opengis.net/wfs/2.0/wfs.xsd')
-    .att('numberMatched', String(geojson.features.length))
-    .att('numberReturned', String(geojson.features.length));
+    .att('numberMatched', String(geojson.numberMatched ?? geojson.features.length))
+    .att('numberReturned', String(geojson.numberReturned ?? geojson.features.length));
 
   // Add boundedBy if we have features
   if (geojson.features.length > 0) {
     const bounds = calculateBounds(geojson.features);
     const boundedBy = doc.ele('gml:boundedBy');
-    const envelope = boundedBy.ele('gml:Envelope').att('srsName', 'urn:ogc:def:crs:EPSG::4326');
+    const envelope = boundedBy.ele('gml:Envelope').att('srsName', 'urn:ogc:def:crs:OGC:1.3:CRS84');
     envelope.ele('gml:lowerCorner').txt(`${bounds.minX} ${bounds.minY}`);
     envelope.ele('gml:upperCorner').txt(`${bounds.maxX} ${bounds.maxY}`);
   }

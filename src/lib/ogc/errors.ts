@@ -10,6 +10,7 @@ export type OgcExceptionCode =
   | "MissingParameterValue"
   | "InvalidParameterValue"
   | "InvalidValue"
+  | "OperationNotSupported"
   | "NotFound"
   | "NoApplicableCode";
 
@@ -17,6 +18,7 @@ const DEFAULT_HTTP_STATUS: Record<OgcExceptionCode, number> = {
   MissingParameterValue: 400,
   InvalidParameterValue: 400,
   InvalidValue: 400,
+  OperationNotSupported: 400,
   NotFound: 404,
   NoApplicableCode: 500,
 };

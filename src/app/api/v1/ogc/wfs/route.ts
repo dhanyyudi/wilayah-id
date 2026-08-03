@@ -2,20 +2,93 @@
  * OGC WFS (Web Feature Service) Endpoint
  * Supports: GetCapabilities, DescribeFeatureType, GetFeature
  * Version: 2.0.0
+ *
+ * Truthful and bounded: every unsupported or malformed parameter is
+ * rejected with an ows:ExceptionReport instead of being silently ignored,
+ * FILTER is refused with OperationNotSupported until a safe filter grammar
+ * exists, and GetFeature paging is bounded to a count of 1..1000 with a
+ * default of 10. Data access goes through the shared OGC repository, so
+ * WFS serves exactly the collections and fields the catalog advertises.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  generateWFSCapabilities, 
-  parseOGCParams, 
-  validateParams,
-  WFS_FEATURE_TYPES 
-} from '@/lib/ogc-utils';
+import { create } from 'xmlbuilder2';
+import { generateWFSCapabilities, parseOGCParams } from '@/lib/ogc-utils';
 import { geoJSONToGML } from '@/lib/gml-utils';
-import type { GMLFeatureCollection, GMLGeometry } from '@/lib/gml-utils';
-import { getDb } from '@/lib/db';
+import type { GMLFeatureCollection } from '@/lib/gml-utils';
+import { findCollection, COLLECTION_IDS } from '@/lib/ogc/catalog';
+import {
+  OgcError,
+  isOgcError,
+  invalidParameterValue,
+} from '@/lib/ogc/errors';
+import { parseFeatureQuery } from '@/lib/ogc/params';
+import { createOgcRepository, type OgcRepository } from '@/lib/ogc/repository';
+import { generateFeatureTypeSchema } from '@/lib/ogc/xsd';
 
 export const dynamic = 'force-dynamic';
+
+const WFS_VERSION = '2.0.0';
+const FEATURES_CACHE = 'public, max-age=300';
+const METADATA_CACHE = 'public, max-age=3600';
+
+const GEOJSON_FORMATS = new Set([
+  'application/geo+json',
+  'geojson',
+  'json',
+  'application/json',
+]);
+const GML_FORMATS = new Set([
+  'application/gml+xml; version=3.2',
+  'application/gml+xml',
+  'text/xml; subtype=gml/3.2',
+  'gml',
+  'gml3',
+  'xml',
+]);
+const DESCRIBE_FORMATS = new Set([
+  'application/gml+xml; version=3.2',
+  'application/gml+xml',
+  'text/xml; subtype=gml/3.2',
+  'xmlschema',
+  'application/xml',
+  'text/xml',
+]);
+const SRSNAME_SPELLINGS = new Set([
+  'EPSG:4326',
+  'urn:ogc:def:crs:EPSG::4326',
+  'CRS84',
+  'OGC:CRS84',
+  'urn:ogc:def:crs:OGC::CRS84',
+  'urn:ogc:def:crs:OGC:1.3:CRS84',
+  'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+]);
+
+/** Protocol-level parameters the route consumes itself; everything else is
+ * handed to the shared feature query parser, which rejects unknown names. */
+const WFS_PROTOCOL_PARAMS = new Set([
+  'service',
+  'request',
+  'version',
+  'acceptversions',
+  'typename',
+  'typenames',
+  'outputformat',
+  'maxfeatures',
+  'count',
+  'startindex',
+  'srsname',
+  'filter',
+  'filter_language',
+]);
+
+let repository: OgcRepository | undefined;
+
+/** Lazily created shared repository; replaced by tests via module mock. */
+function getOgcRepository(): OgcRepository {
+  repository ??= createOgcRepository();
+  return repository;
+}
 
 /**
  * Handle WFS requests
@@ -24,46 +97,97 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const params = parseOGCParams(searchParams);
-    
-    const service = params['SERVICE'];
-    const requestType = params['REQUEST'];
 
-    // Validate service
-    if (service && service.toLowerCase() !== 'wfs') {
-      return NextResponse.json(
-        { error: 'Invalid service. Expected: WFS' },
-        { status: 400 }
+    // FILTER is refused for every operation until a safe filter grammar
+    // exists; silently ignoring it would return unbounded wrong results.
+    if (params['FILTER'] !== undefined || params['FILTER_LANGUAGE'] !== undefined) {
+      throw new OgcError(
+        'OperationNotSupported',
+        'The FILTER parameter is not supported by this service; no filter grammar is implemented',
+        { locator: 'FILTER' },
       );
     }
 
-    // Route to appropriate handler
-    switch (requestType?.toUpperCase()) {
+    const service = params['SERVICE'];
+    if (service !== undefined && service.toUpperCase() !== 'WFS') {
+      throw invalidParameterValue(
+        'service',
+        `Invalid service "${service}"; expected WFS`,
+      );
+    }
+
+    const requestType = params['REQUEST'];
+    if (!requestType) {
+      throw new OgcError(
+        'MissingParameterValue',
+        'Missing required parameter "REQUEST"',
+        { locator: 'request' },
+      );
+    }
+
+    const version = params['VERSION'];
+    if (version !== undefined && version !== WFS_VERSION) {
+      throw invalidParameterValue(
+        'version',
+        `Unsupported version "${version}"; only ${WFS_VERSION} is implemented`,
+      );
+    }
+
+    switch (requestType.toUpperCase()) {
       case 'GETCAPABILITIES':
         return handleGetCapabilities(request);
-      
+
       case 'DESCRIBEFEATURETYPE':
         return handleDescribeFeatureType(params);
-      
+
       case 'GETFEATURE':
-        return handleGetFeature(params);
-      
+        return await handleGetFeature(params, searchParams);
+
       default:
-        return NextResponse.json(
-          { 
-            error: 'Invalid request',
-            message: `Request type '${requestType}' not supported`,
-            supported: ['GetCapabilities', 'DescribeFeatureType', 'GetFeature']
-          },
-          { status: 400 }
+        throw new OgcError(
+          'OperationNotSupported',
+          `Request "${requestType}" is not supported; supported requests are GetCapabilities, DescribeFeatureType, GetFeature`,
+          { locator: 'request' },
         );
     }
   } catch (error) {
-    console.error('WFS Error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return wfsExceptionResponse(error);
   }
+}
+
+/**
+ * Maps any thrown error to an OWS 1.1 exception report. Non-OGC errors are
+ * logged server-side and surfaced as a generic NoApplicableCode report so
+ * database details never leak to callers.
+ */
+function wfsExceptionResponse(error: unknown): NextResponse {
+  const ogcError = isOgcError(error)
+    ? error
+    : new OgcError(
+        'NoApplicableCode',
+        'The server could not complete the request',
+      );
+  if (!isOgcError(error)) {
+    console.error('WFS unexpected error:', error);
+  }
+
+  const xml = create({ version: '1.0', encoding: 'UTF-8' })
+    .ele('ows:ExceptionReport')
+    .att('xmlns:ows', 'http://www.opengis.net/ows/1.1')
+    .att('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance')
+    .att('version', '1.0.0')
+    .att('xml:lang', 'en')
+    .ele('ows:Exception')
+    .att('exceptionCode', ogcError.code);
+  if (ogcError.locator) {
+    xml.att('locator', ogcError.locator);
+  }
+  xml.ele('ows:ExceptionText').txt(ogcError.message);
+
+  return new NextResponse(xml.end({ prettyPrint: true }), {
+    status: ogcError.httpStatus,
+    headers: { 'Content-Type': 'text/xml; charset=utf-8' },
+  });
 }
 
 /**
@@ -72,250 +196,163 @@ export async function GET(request: NextRequest) {
 function handleGetCapabilities(request: NextRequest) {
   const baseUrl = `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('host')}`;
   const xml = generateWFSCapabilities(baseUrl);
-  
+
   return new NextResponse(xml, {
     headers: {
       'Content-Type': 'text/xml; charset=utf-8',
-      'Cache-Control': 'public, max-age=3600',
+      'Cache-Control': METADATA_CACHE,
     },
   });
 }
 
 /**
+ * Resolves and validates the requested type names against the catalog.
+ * TYPENAMES (WFS 2.0) wins over the legacy TYPENAME spelling.
+ */
+function resolveTypeNames(params: Record<string, string>): string[] {
+  const raw = params['TYPENAMES'] ?? params['TYPENAME'];
+  if (!raw) {
+    throw new OgcError(
+      'MissingParameterValue',
+      'Missing required parameter "TYPENAMES"',
+      { locator: 'typeName' },
+    );
+  }
+  const names = raw
+    .split(',')
+    .map((name) => name.trim())
+    .filter((name) => name.length > 0);
+  if (names.length === 0) {
+    throw invalidParameterValue('typeName', 'Parameter "TYPENAMES" must not be empty');
+  }
+  return names;
+}
+
+/**
  * Handle DescribeFeatureType request
- * Returns XSD schema for the feature type
+ * Returns an XML Schema (application/xml) generated from the catalog.
  */
 function handleDescribeFeatureType(params: Record<string, string>) {
-  const typeName = params['TYPENAME'] || params['TYPE_NAME'];
-  
-  if (!typeName) {
-    return NextResponse.json(
-      { error: 'Missing required parameter: TYPENAME' },
-      { status: 400 }
+  const outputFormat = params['OUTPUTFORMAT'];
+  if (outputFormat !== undefined && !DESCRIBE_FORMATS.has(outputFormat.toLowerCase())) {
+    throw invalidParameterValue(
+      'outputFormat',
+      `Unsupported outputFormat "${outputFormat}" for DescribeFeatureType; supported: application/gml+xml; version=3.2`,
     );
   }
 
-  const featureType = WFS_FEATURE_TYPES[typeName.toLowerCase() as keyof typeof WFS_FEATURE_TYPES];
-  
-  if (!featureType) {
-    return NextResponse.json(
-      { 
-        error: 'Invalid feature type',
-        validTypes: Object.keys(WFS_FEATURE_TYPES)
-      },
-      { status: 400 }
-    );
-  }
+  const typeNames = resolveTypeNames(params);
+  const xsd = generateFeatureTypeSchema(typeNames);
 
-  // Return simple schema description
-  return NextResponse.json({
-    featureType: typeName,
-    schema: {
-      namespace: 'http://wilayah.id/wfs',
-      elementFormDefault: 'qualified',
-      properties: featureType.properties.reduce((acc, prop) => {
-        acc[prop] = {
-          type: prop === 'geometry' ? 'gml:GeometryPropertyType' : 'string',
-          nillable: prop !== 'geometry',
-        };
-        return acc;
-      }, {} as Record<string, unknown>),
+  return new NextResponse(xsd, {
+    headers: {
+      'Content-Type': 'application/xml; charset=utf-8',
+      'Cache-Control': METADATA_CACHE,
     },
   });
 }
 
 /**
  * Handle GetFeature request
- * Returns features in GeoJSON or GML format
+ * Returns features in GeoJSON or GML 3.2 format, paged and bounded.
  */
-async function handleGetFeature(params: Record<string, string>) {
-  const required = ['TYPENAME'];
-  const error = validateParams(params, required);
-  
-  if (error) {
-    return NextResponse.json({ error }, { status: 400 });
+async function handleGetFeature(
+  params: Record<string, string>,
+  searchParams: URLSearchParams,
+) {
+  const typeNames = resolveTypeNames(params);
+  if (typeNames.length > 1) {
+    throw new OgcError(
+      'OperationNotSupported',
+      'Queries over multiple type names are not supported; request one type per call',
+      { locator: 'typeNames' },
+    );
   }
-
-  const typeName = params['TYPENAME'];
-  const outputFormat = params['OUTPUTFORMAT'] || 'application/geo+json';
-  const maxFeatures = parseInt(params['MAXFEATURES'] || params['COUNT'] || '1000');
-  const bbox = params['BBOX'];
-
-  // Validate feature type
-  const featureType = WFS_FEATURE_TYPES[typeName.toLowerCase() as keyof typeof WFS_FEATURE_TYPES];
-  
-  if (!featureType) {
-    return NextResponse.json(
-      { 
-        error: 'Invalid feature type',
-        requested: typeName,
-        validTypes: Object.keys(WFS_FEATURE_TYPES)
-      },
-      { status: 400 }
+  const typeName = typeNames[0];
+  const collection = findCollection(typeName.toLowerCase());
+  if (!collection) {
+    throw invalidParameterValue(
+      'typeName',
+      `Unknown feature type "${typeName}"; valid types are: ${COLLECTION_IDS.join(', ')}`,
     );
   }
 
-  try {
-    const sql = getDb();
-    
-    // Build query based on feature type
-    let query;
-    const limit = Math.min(maxFeatures, 10000); // Hard limit for performance
+  const outputFormat = params['OUTPUTFORMAT'] ?? 'application/geo+json';
+  const normalizedFormat = outputFormat.toLowerCase();
+  const isGml = GML_FORMATS.has(normalizedFormat);
+  if (!isGml && !GEOJSON_FORMATS.has(normalizedFormat)) {
+    throw invalidParameterValue(
+      'outputFormat',
+      `Unsupported outputFormat "${outputFormat}"; supported: application/gml+xml; version=3.2, application/geo+json`,
+    );
+  }
 
-    switch (typeName.toLowerCase()) {
-      case 'provinces':
-        query = buildFeatureQuery(sql, 'provinces', 'kode_prov', 'nama_provinsi', 'geom', bbox, limit);
-        break;
-      case 'regencies':
-        query = buildFeatureQuery(sql, 'regencies', 'kode_kab', 'nama_kabupaten', 'geom', bbox, limit);
-        break;
-      case 'districts':
-        query = buildFeatureQuery(sql, 'districts', 'kode_kec', 'nama_kecamatan', 'geom', bbox, limit);
-        break;
-      case 'villages':
-        query = buildFeatureQuery(sql, 'villages', 'kode_desa', 'nama_desa', 'geom', bbox, limit);
-        break;
-      default:
-        return NextResponse.json({ error: 'Unknown feature type' }, { status: 400 });
+  const srsName = params['SRSNAME'];
+  if (srsName !== undefined && !SRSNAME_SPELLINGS.has(srsName)) {
+    throw invalidParameterValue(
+      'srsName',
+      `Unsupported srsName "${srsName}"; only CRS84 (longitude/latitude) is offered`,
+    );
+  }
+
+  // Strip the protocol parameters this handler consumes, map the WFS paging
+  // vocabulary onto the shared one, and let the shared parser validate and
+  // reject anything it does not know.
+  const cleaned = new URLSearchParams();
+  searchParams.forEach((value, key) => {
+    if (!WFS_PROTOCOL_PARAMS.has(key.toLowerCase())) {
+      cleaned.append(key, value);
     }
+  });
+  const count = params['COUNT'] ?? params['MAXFEATURES'];
+  if (count !== undefined) {
+    cleaned.set('limit', count);
+  }
+  if (params['STARTINDEX'] !== undefined) {
+    cleaned.set('offset', params['STARTINDEX']);
+  }
+  const query = parseFeatureQuery(cleaned);
 
-    const rows = await query;
+  const result = await getOgcRepository().listFeatures(collection.id, {
+    bbox: query.bbox,
+    limit: query.limit,
+    offset: query.offset,
+    properties: query.properties,
+    crs: query.crs,
+  });
 
-    // Convert to GeoJSON
-    const features: GMLFeatureCollection['features'] = rows.map((row: Record<string, unknown>) => {
-      const props: Record<string, unknown> = {
-        code: row.code,
-        name: row.name,
-      };
-      if (row.parent_code) {
-        props.parent_code = row.parent_code;
-      }
-      return {
-        type: 'Feature' as const,
-        id: row.code as string | number,
-        geometry: row.geometry as GMLGeometry,
-        properties: props,
-      };
-    });
-
-    const geojson: GMLFeatureCollection & {
+  if (isGml) {
+    const featureCollection: GMLFeatureCollection & {
       numberMatched: number;
       numberReturned: number;
     } = {
       type: 'FeatureCollection',
-      numberMatched: features.length,
-      numberReturned: features.length,
-      features,
-      // Note: GeoJSON RFC 7946 default CRS is WGS84 (EPSG:4326)
-      // No explicit crs property needed
+      numberMatched: result.numberMatched,
+      numberReturned: result.numberReturned,
+      features: result.features as unknown as GMLFeatureCollection['features'],
     };
-
-    // Return in requested format
-    if (outputFormat.includes('gml') || outputFormat.includes('xml')) {
-      // Convert to GML format
-      const gml = geoJSONToGML(geojson, typeName);
-      
-      return new NextResponse(gml, {
-        headers: {
-          'Content-Type': 'text/xml; charset=utf-8',
-          'Cache-Control': 'public, max-age=300',
-        },
-      });
-    }
-
-    return NextResponse.json(geojson, {
+    const gml = geoJSONToGML(featureCollection, collection.id);
+    return new NextResponse(gml, {
       headers: {
-        'Content-Type': 'application/geo+json',
-        'Cache-Control': 'public, max-age=300',
+        'Content-Type': 'text/xml; charset=utf-8',
+        'Cache-Control': FEATURES_CACHE,
       },
     });
-
-  } catch (error) {
-    console.error('GetFeature error:', error);
-    return NextResponse.json(
-      { error: 'Database query failed' },
-      { status: 500 }
-    );
-  }
-}
-
-/**
- * Whitelist of valid table configurations for safe query building
- * All identifiers are validated against this whitelist to prevent SQL injection
- * Using Indonesian table names as per database schema
- */
-const TABLE_CONFIG: Record<string, { table: string; code: string; name: string; parent?: string }> = {
-  provinces: { table: 'provinsi', code: 'kode_prov', name: 'nama_provinsi' },
-  regencies: { table: 'kabupaten', code: 'kode_kab', name: 'nama_kabupaten', parent: 'kode_prov' },
-  districts: { table: 'kecamatan', code: 'kode_kec', name: 'nama_kecamatan', parent: 'kode_kab' },
-  villages: { table: 'desa', code: 'kode_desa', name: 'nama_desa', parent: 'kode_kec' },
-};
-
-/**
- * Build and execute SQL query for feature retrieval
- * Uses raw SQL with validated identifiers (SQL injection safe)
- */
-async function executeFeatureQuery(
-  sql: ReturnType<typeof getDb>,
-  table: string,
-  bbox: string | undefined,
-  limit: number
-): Promise<Array<Record<string, unknown>>> {
-  // Validate table name against whitelist
-  const config = TABLE_CONFIG[table.toLowerCase()];
-  if (!config) {
-    throw new Error(`Invalid table name: ${table}`);
   }
 
-  // Build the query string with validated identifiers
-  // Note: config.* values come from whitelist, user input (bbox/limit) is parameterized
-  let query: string;
-  let params: (number | string)[];
-
-  if (bbox) {
-    // Parse bbox: minX,minY,maxX,maxY
-    const [minX, minY, maxX, maxY] = bbox.split(',').map(Number);
-    
-    query = `
-      SELECT 
-        ${config.code} as code,
-        ${config.name} as name,
-        ${config.parent ? `${config.parent} as parent_code,` : ''}
-        ST_AsGeoJSON(geom)::json as geometry
-      FROM ${config.table}
-      WHERE ST_Intersects(
-        geom,
-        ST_MakeEnvelope($1, $2, $3, $4, 4326)
-      )
-      LIMIT $5
-    `;
-    params = [minX, minY, maxX, maxY, limit];
-  } else {
-    query = `
-      SELECT 
-        ${config.code} as code,
-        ${config.name} as name,
-        ${config.parent ? `${config.parent} as parent_code,` : ''}
-        ST_AsGeoJSON(geom)::json as geometry
-      FROM ${config.table}
-      LIMIT $1
-    `;
-    params = [limit];
-  }
-
-  // Execute using sql.query for conventional function call with placeholders
-  return sql.query(query, params);
-}
-
-// Backward compatibility wrapper
-function buildFeatureQuery(
-  sql: ReturnType<typeof getDb>,
-  table: string,
-  codeColumn: string,
-  nameColumn: string,
-  geomColumn: string,
-  bbox: string | undefined,
-  limit: number
-): Promise<Array<Record<string, unknown>>> {
-  return executeFeatureQuery(sql, table, bbox, limit);
+  return NextResponse.json(
+    {
+      type: 'FeatureCollection',
+      numberMatched: result.numberMatched,
+      numberReturned: result.numberReturned,
+      timeStamp: new Date().toISOString(),
+      features: result.features,
+    },
+    {
+      headers: {
+        'Content-Type': 'application/geo+json',
+        'Cache-Control': FEATURES_CACHE,
+      },
+    },
+  );
 }

@@ -4,6 +4,7 @@
  */
 
 import { create } from 'xmlbuilder2';
+import { COLLECTION_IDS, findCollection } from './ogc/catalog';
 
 // WMS Layer Configuration
 export const WMS_LAYERS = {
@@ -37,34 +38,96 @@ export const WMS_LAYERS = {
   },
 } as const;
 
-// WFS Feature Types
-export const WFS_FEATURE_TYPES = {
-  provinces: {
-    name: 'provinces',
-    title: 'Provinces',
-    abstract: 'Indonesian provinces with geometry',
-    properties: ['kode_prov', 'nama_provinsi', 'geometry'],
-  },
-  regencies: {
-    name: 'regencies',
-    title: 'Regencies/Cities',
-    abstract: 'Indonesian regencies and cities with geometry',
-    properties: ['kode_kab', 'nama_kabupaten', 'kode_prov', 'geometry'],
-  },
-  districts: {
-    name: 'districts',
-    title: 'Districts',
-    abstract: 'Indonesian districts with geometry',
-    properties: ['kode_kec', 'nama_kecamatan', 'kode_kab', 'geometry'],
-  },
-  villages: {
-    name: 'villages',
-    title: 'Villages',
-    abstract: 'Indonesian villages with geometry',
-    properties: ['kode_desa', 'nama_desa', 'kode_kec', 'geometry'],
-  },
-} as const;
+/**
+ * Generate WFS GetCapabilities XML
+ *
+ * Truthful by construction: only the implemented operations, versions,
+ * output formats, and constraints are advertised. Feature types come from
+ * the shared collection catalog so the document cannot drift from the
+ * data the endpoint actually serves. The empty fes:Filter_Capabilities
+ * element declares that no filter grammar is supported; requests carrying
+ * FILTER are rejected with OperationNotSupported.
+ */
+export function generateWFSCapabilities(baseUrl: string): string {
+  const doc = create({ version: '1.0', encoding: 'UTF-8' })
+    .ele('http://www.opengis.net/wfs/2.0', 'WFS_Capabilities')
+    .att('version', '2.0.0')
+    .att('xmlns', 'http://www.opengis.net/wfs/2.0')
+    .att('xmlns:ows', 'http://www.opengis.net/ows/1.1')
+    .att('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    .att('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance')
+    .att('xmlns:fes', 'http://www.opengis.net/fes/2.0');
 
+  // Service identification
+  const serviceId = doc.ele('ows:ServiceIdentification');
+  serviceId.ele('ows:Title').txt('wilayah-id WFS Service');
+  serviceId.ele('ows:Abstract').txt('Web Feature Service for Indonesian Administrative Boundaries');
+  serviceId.ele('ows:ServiceType').txt('WFS');
+  serviceId.ele('ows:ServiceTypeVersion').txt('2.0.0');
+
+  // Operations metadata
+  const opsMeta = doc.ele('ows:OperationsMetadata');
+
+  ['GetCapabilities', 'DescribeFeatureType', 'GetFeature'].forEach(op => {
+    const operation = opsMeta.ele('ows:Operation').att('name', op);
+    const get = operation.ele('ows:DCP').ele('ows:HTTP').ele('ows:Get');
+    get.att('xlink:href', `${baseUrl}/api/v1/ogc/wfs`);
+
+    if (op === 'GetCapabilities') {
+      operation.ele('ows:Parameter').att('name', 'AcceptVersions')
+        .ele('ows:AllowedValues').ele('ows:Value').txt('2.0.0');
+      operation.ele('ows:Parameter').att('name', 'AcceptFormats')
+        .ele('ows:AllowedValues').ele('ows:Value').txt('text/xml');
+    } else {
+      const formats = operation.ele('ows:Parameter').att('name', 'outputFormat')
+        .ele('ows:AllowedValues');
+      if (op === 'DescribeFeatureType') {
+        formats.ele('ows:Value').txt('application/gml+xml; version=3.2');
+      } else {
+        formats.ele('ows:Value').txt('application/gml+xml; version=3.2');
+        formats.ele('ows:Value').txt('application/geo+json');
+      }
+    }
+  });
+
+  // Service constraints: result paging with a hard bound.
+  const constraints: Array<[string, string]> = [
+    ['ImplementsBasicWFS', 'TRUE'],
+    ['ImplementsTransactionalWFS', 'FALSE'],
+    ['KVPEncoding', 'TRUE'],
+    ['XMLEncoding', 'FALSE'],
+    ['SOAPEncoding', 'FALSE'],
+    ['ImplementsResultPaging', 'TRUE'],
+    ['CountDefault', '10'],
+    ['CountMaximum', '1000'],
+  ];
+  constraints.forEach(([name, value]) => {
+    opsMeta.ele('ows:Constraint').att('name', name)
+      .ele('ows:AllowedValues').ele('ows:Value').txt(value);
+  });
+
+  // Feature catalog
+  const featureCatalog = doc.ele('FeatureTypeList');
+  COLLECTION_IDS.forEach(id => {
+    const collection = findCollection(id)!;
+    const ftEle = featureCatalog.ele('FeatureType');
+    ftEle.ele('Name').txt(collection.id);
+    ftEle.ele('Title').txt(collection.title);
+    ftEle.ele('Abstract').txt(`Indonesian administrative boundaries: ${collection.title}.`);
+    ftEle.ele('DefaultCRS').txt('urn:ogc:def:crs:OGC:1.3:CRS84');
+    const outputFormats = ftEle.ele('OutputFormats');
+    outputFormats.ele('OutputFormat').txt('application/gml+xml; version=3.2');
+    outputFormats.ele('OutputFormat').txt('application/geo+json');
+    ftEle.ele('ows:WGS84BoundingBox')
+      .ele('ows:LowerCorner').txt('95 -11').up()
+      .ele('ows:UpperCorner').txt('141 6');
+  });
+
+  // No filter grammar is implemented; FILTER requests are rejected.
+  doc.ele('fes:Filter_Capabilities');
+
+  return doc.end({ prettyPrint: true });
+}
 /**
  * Generate WMS GetCapabilities XML
  */
@@ -147,52 +210,6 @@ export function generateWMSCapabilities(baseUrl: string): string {
       .att('miny', String(layer.bbox[1]))
       .att('maxx', String(layer.bbox[2]))
       .att('maxy', String(layer.bbox[3]));
-  });
-
-  return doc.end({ prettyPrint: true });
-}
-
-/**
- * Generate WFS GetCapabilities XML
- */
-export function generateWFSCapabilities(baseUrl: string): string {
-  const doc = create({ version: '1.0', encoding: 'UTF-8' })
-    .ele('http://www.opengis.net/wfs/2.0', 'WFS_Capabilities')
-    .att('version', '2.0.0')
-    .att('xmlns', 'http://www.opengis.net/wfs/2.0')
-    .att('xmlns:ows', 'http://www.opengis.net/ows/1.1')
-    .att('xmlns:xlink', 'http://www.w3.org/1999/xlink')
-    .att('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance')
-    .att('xmlns:fes', 'http://www.opengis.net/fes/2.0');
-
-  // Service identification
-  const serviceId = doc.ele('ows:ServiceIdentification');
-  serviceId.ele('ows:Title').txt('wilayah-id WFS Service');
-  serviceId.ele('ows:Abstract').txt('Web Feature Service for Indonesian Administrative Boundaries');
-  serviceId.ele('ows:ServiceType').txt('WFS');
-  serviceId.ele('ows:ServiceTypeVersion').txt('1.1.0');
-  serviceId.ele('ows:ServiceTypeVersion').txt('2.0.0');
-
-  // Operations metadata
-  const opsMeta = doc.ele('ows:OperationsMetadata');
-  
-  ['GetCapabilities', 'DescribeFeatureType', 'GetFeature'].forEach(op => {
-    const operation = opsMeta.ele('ows:Operation').att('name', op);
-    const get = operation.ele('ows:DCP').ele('ows:HTTP').ele('ows:Get');
-    get.att('xlink:href', `${baseUrl}/api/v1/ogc/wfs`);
-  });
-
-  // Feature catalog
-  const featureCatalog = doc.ele('FeatureTypeList');
-  Object.values(WFS_FEATURE_TYPES).forEach(ft => {
-    const ftEle = featureCatalog.ele('FeatureType');
-    ftEle.ele('Name').txt(ft.name);
-    ftEle.ele('Title').txt(ft.title);
-    ftEle.ele('Abstract').txt(ft.abstract);
-    ftEle.ele('DefaultCRS').txt('urn:ogc:def:crs:EPSG::4326');
-    ftEle.ele('ows:WGS84BoundingBox')
-      .ele('ows:LowerCorner').txt('95 -11').up()
-      .ele('ows:UpperCorner').txt('141 6');
   });
 
   return doc.end({ prettyPrint: true });
