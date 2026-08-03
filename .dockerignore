@@ -1,0 +1,35 @@
+# Version-control and agent metadata
+.git
+.github
+.worktrees
+.superpowers
+
+# Installed dependencies and generated output
+node_modules
+.next
+.open-next
+coverage
+.nyc_output
+
+# Local configuration and secrets
+.env*
+!.env.example
+
+# Logs and package-manager diagnostics
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary and editor artifacts
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+*.swp
+*.swo
+*~
+.tmp
+tmp
+temp
