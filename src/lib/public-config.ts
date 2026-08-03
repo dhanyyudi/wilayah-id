@@ -44,3 +44,10 @@ export function getPublicOrigins(env: PublicEnvironment = process.env) {
     ),
   };
 }
+
+export function getAbsolutePublicUrl(
+  path: string,
+  env: PublicEnvironment = process.env,
+) {
+  return new URL(path, getPublicOrigins(env).site).href;
+}

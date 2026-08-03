@@ -21,6 +21,17 @@ import type { MapGeoJSONFeature, LngLat } from "maplibre-gl";
 import Link from "next/link";
 import { TechStackMarquee } from "@/components/tech-stack-marquee";
 import { SearchAnimation } from "@/components/search-animation";
+import { getAbsolutePublicUrl } from "@/lib/public-config";
+
+const publicClientEnvironment = {
+  NODE_ENV: process.env.NODE_ENV,
+  NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+};
+const provincesUrl = getAbsolutePublicUrl(
+  "/api/v1/regions/provinces",
+  publicClientEnvironment,
+);
+const provincesCurlCommand = `curl ${provincesUrl}`;
 
 /* ── Stats ───────────────────────────────────────── */
 // Removed unused STATS array
@@ -264,7 +275,7 @@ export default function HomePage() {
                   <div className="w-3 h-3 rounded-full bg-indigo-500" />
                 </div>
                 <button
-                  onClick={() => navigator.clipboard.writeText("curl /api/v1/regions/provinces")}
+                  onClick={() => navigator.clipboard.writeText(provincesCurlCommand)}
                   className="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 transition-colors"
                 >
                   <Copy className="w-3 h-3" />
@@ -273,7 +284,7 @@ export default function HomePage() {
               </div>
               <div className="p-5 text-left overflow-x-auto">
                 <code className="text-sm font-mono text-zinc-300">
-                  <span className="text-indigo-400">curl</span> /api/v1/regions/provinces
+                  <span className="text-indigo-400">curl</span> {provincesUrl}
                 </code>
               </div>
             </div>

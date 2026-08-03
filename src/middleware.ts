@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getPublicOrigins } from "@/lib/public-config";
 
-export function proxy(request: NextRequest) {
+// Keep the legacy middleware convention while OpenNext requires Edge middleware.
+export function middleware(request: NextRequest) {
   const url = request.nextUrl;
 
   if (url.pathname === "/api/health") {

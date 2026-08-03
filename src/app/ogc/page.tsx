@@ -6,11 +6,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getAbsolutePublicUrl } from "@/lib/public-config";
 import { 
   ArrowLeft, Copy, Map, Database, Layers, 
   Globe, Code, Terminal, CheckCircle, ExternalLink,
   QrCode, FileCode
 } from "lucide-react";
+
+const publicClientEnvironment = {
+  NODE_ENV: process.env.NODE_ENV,
+  NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+};
 
 function CodeBlock({ title, children }: { title: string; children: string }) {
   const [copied, setCopied] = useState(false);
@@ -84,7 +90,18 @@ function ServiceCard({
 }
 
 export default function OGCPage() {
-  const baseUrl = "/api/v1/ogc";
+  const baseUrl = getAbsolutePublicUrl(
+    "/api/v1/ogc",
+    publicClientEnvironment,
+  );
+  const provincesUrl = getAbsolutePublicUrl(
+    "/api/v1/boundaries/provinces?geometry=true",
+    publicClientEnvironment,
+  );
+  const jakartaUrl = getAbsolutePublicUrl(
+    "/api/v1/boundaries/provinces/31?geometry=true",
+    publicClientEnvironment,
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -368,10 +385,10 @@ curl "${baseUrl}/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&LAYERS=provinsi&QUERY_LA
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <CodeBlock title="All Provinces (GeoJSON)">
-{`curl /api/v1/boundaries/provinces?geometry=true`}
+{`curl ${provincesUrl}`}
             </CodeBlock>
             <CodeBlock title="Specific Province">
-{`curl /api/v1/boundaries/provinces/31?geometry=true`}
+{`curl ${jakartaUrl}`}
             </CodeBlock>
           </div>
 

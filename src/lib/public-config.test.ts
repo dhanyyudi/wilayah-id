@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getPublicOrigins } from "./public-config";
+import { getAbsolutePublicUrl, getPublicOrigins } from "./public-config";
 
 describe("getPublicOrigins", () => {
   it("returns the public service defaults", () => {
@@ -20,6 +20,14 @@ describe("getPublicOrigins", () => {
     expect(origins.api.href).toBe("https://api.example.test/");
     expect(origins.tiles.href).toBe("https://tiles.example.test/");
     expect(origins.site.href).toBe("https://site.example.test/");
+  });
+
+  it("builds an absolute public URL from the canonical site configuration", () => {
+    expect(
+      getAbsolutePublicUrl("/api/v1/regions/search?q=jakarta", {
+        NEXT_PUBLIC_SITE_URL: "https://site.example.test",
+      }),
+    ).toBe("https://site.example.test/api/v1/regions/search?q=jakarta");
   });
 
   it.each([
