@@ -81,7 +81,10 @@ jobs:
           health_json=""
           health_status=""
           for attempt in $(seq 1 30); do
-            if health_json=$(curl --fail --silent --show-error \
+            if health_json=$(curl \
+              --connect-timeout 1 \
+              --max-time 2 \
+              --fail --silent --show-error \
               "http://127.0.0.1:${health_port}/api/health" 2>/dev/null); then
               if health_status=$(printf '%s' "${health_json}" | python3 -c \
                 'import json,sys; print(json.load(sys.stdin).get("status", ""))') && \

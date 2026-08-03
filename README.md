@@ -51,59 +51,70 @@ The web health endpoint is `GET /api/health`. A healthy process returns HTTP
 Run the complete web release gate before publishing a container:
 
 ```bash
-set -euo pipefail
+(
+  set -euo pipefail
 
-image_name="wilayah-id:phase-1"
-container_name="wilayah-id-phase-1-health-$$"
-health_port=$((20000 + $$ % 20000))
+  image_name="wilayah-id:phase-1"
+  container_name="wilayah-id-phase-1-health-$$"
+  health_port=$((20000 + $$ % 20000))
 
-if docker container inspect "${container_name}" >/dev/null 2>&1; then
-  printf 'Refusing to replace existing container %s\n' "${container_name}" >&2
-  exit 1
-fi
-
-cleanup() {
-  docker rm -f "${container_name}" >/dev/null 2>&1 || true
-}
-trap cleanup EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
-
-pnpm install --frozen-lockfile
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm build:cf
-pnpm exec wrangler deploy --dry-run
-docker build --tag "${image_name}" .
-docker run --rm -d \
-  --name "${container_name}" \
-  -p "127.0.0.1:${health_port}:3000" \
-  "${image_name}"
-
-health_json=""
-health_status=""
-for attempt in $(seq 1 30); do
-  if health_json=$(curl --fail --silent --show-error \
-    "http://127.0.0.1:${health_port}/api/health" 2>/dev/null); then
-    if health_status=$(printf '%s' "${health_json}" | node -p \
-      'JSON.parse(require("fs").readFileSync(0, "utf8")).status') && \
-      test "${health_status}" = "ok"; then
-      break
-    fi
-  fi
-
-  if test "${attempt}" -eq 30; then
-    docker logs "${container_name}" || true
+  if docker container inspect "${container_name}" >/dev/null 2>&1; then
+    printf 'Refusing to replace existing container %s\n' \
+      "${container_name}" >&2
     exit 1
   fi
-  sleep 1
-done
 
-printf 'health_port=%s health=%s\n' "${health_port}" "${health_json}"
-test "${health_status}" = "ok"
+  cleanup() {
+    docker rm -f "${container_name}" >/dev/null 2>&1 || true
+  }
+  trap cleanup EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+
+  pnpm install --frozen-lockfile
+  pnpm lint
+  pnpm typecheck
+  pnpm test
+  pnpm build
+  pnpm build:cf
+  pnpm exec wrangler deploy --dry-run
+  docker build --tag "${image_name}" .
+  docker run --rm -d \
+    --name "${container_name}" \
+    -p "127.0.0.1:${health_port}:3000" \
+    "${image_name}"
+
+  health_json=""
+  health_status=""
+  for attempt in $(seq 1 30); do
+    if health_json=$(curl \
+      --connect-timeout 1 \
+      --max-time 2 \
+      --fail --silent --show-error \
+      "http://127.0.0.1:${health_port}/api/health" 2>/dev/null); then
+      if health_status=$(printf '%s' "${health_json}" | node -p \
+        'JSON.parse(require("fs").readFileSync(0, "utf8")).status') && \
+        test "${health_status}" = "ok"; then
+        break
+      fi
+    fi
+
+    if test "${attempt}" -eq 30; then
+      docker logs "${container_name}" || true
+      exit 1
+    fi
+    sleep 1
+  done
+
+  printf 'health_port=%s health=%s\n' "${health_port}" "${health_json}"
+  test "${health_status}" = "ok"
+)
 ```
+
+Each loopback request has a one-second connection timeout and a two-second
+total timeout. With 30 attempts and one-second intervals, the readiness phase
+has a wall-clock bound of less than 90 seconds. The subshell keeps fail-fast
+options, variables, functions, and traps isolated from the caller.
 
 The Wrangler command validates the Cloudflare bundle only. Cloudflare Worker
 deployment is handled separately by Workers Builds and is not performed by
