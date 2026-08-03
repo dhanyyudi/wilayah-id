@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { getPublicOrigins } from "@/lib/public-config";
 import "./globals.css";
 
 const inter = Inter({
@@ -16,7 +17,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://wilayah-id-restapi.vercel.app"),
+  metadataBase: getPublicOrigins().site,
   title: "wilayah-id — Batas Administrasi Indonesia",
   description:
     "Peta interaktif batas administrasi Indonesia: 38 provinsi, 514 kabupaten/kota, 7.285 kecamatan, 83.762 desa/kelurahan. API REST gratis & open source.",

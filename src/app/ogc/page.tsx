@@ -84,7 +84,7 @@ function ServiceCard({
 }
 
 export default function OGCPage() {
-  const baseUrl = "https://wilayah-id-restapi.vercel.app/api/v1/ogc";
+  const baseUrl = "/api/v1/ogc";
 
   return (
     <div className="min-h-screen bg-background">
@@ -368,10 +368,10 @@ curl "${baseUrl}/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&LAYERS=provinsi&QUERY_LA
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <CodeBlock title="All Provinces (GeoJSON)">
-{`curl https://wilayah-id-restapi.vercel.app/api/v1/boundaries/provinces?geometry=true`}
+{`curl /api/v1/boundaries/provinces?geometry=true`}
             </CodeBlock>
             <CodeBlock title="Specific Province">
-{`curl https://wilayah-id-restapi.vercel.app/api/v1/boundaries/provinces/31?geometry=true`}
+{`curl /api/v1/boundaries/provinces/31?geometry=true`}
             </CodeBlock>
           </div>
 
@@ -383,7 +383,7 @@ curl "${baseUrl}/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&LAYERS=provinsi&QUERY_LA
               </Button>
             </Link>
             <a 
-              href="https://wilayah-id-restapi.vercel.app/api/v1/boundaries/provinces?geometry=true" 
+              href="/api/v1/boundaries/provinces?geometry=true"
               target="_blank" 
               rel="noopener noreferrer"
             >
