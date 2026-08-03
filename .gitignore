@@ -130,3 +130,7 @@ sql-dumps/
 
 CLAUDE.md
 skills
+
+# Local operational runbooks (server topology, internal hosts; keep out of the public repo)
+docs/internal/
+docs/*.local.md
