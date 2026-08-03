@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Map, MapControls, MapPopup, type MapRef } from "@/components/ui/map";
 import VectorLayerManager from "@/components/map/map-view";
 import Navbar from "@/components/map/navbar";
 import LayerPanel from "@/components/map/layer-panel";
 import InfoPanel from "@/components/map/info-panel";
 import MapSearchBar from "@/components/map/search-bar";
+import type { SearchResult } from "@/components/map/search-bar";
 import DownloadPanel from "@/components/map/download-panel";
 import DownloadByLevel from "@/components/map/download-by-level";
 import AOIDrawer, { getBoundsFromFeature } from "@/components/map/aoi-drawer";
@@ -59,7 +60,6 @@ export default function HomePage() {
   const [aoiMode, setAoiMode] = useState<"rectangle" | "polygon" | null>(null);
   const [aoiBounds, setAoiBounds] = useState<maplibregl.LngLatBounds | null>(null);
   const [aoiFeatures, setAoiFeatures] = useState<Feature[]>([]);
-  const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
   const [clearDrawTrigger, setClearDrawTrigger] = useState(false);
   
   /* ── Mobile panel visibility ───────────────────── */
@@ -99,13 +99,6 @@ export default function HomePage() {
     // Reset trigger after short delay
     setTimeout(() => setClearDrawTrigger(false), 100);
   }, []);
-
-  // Get map instance when ready
-  useEffect(() => {
-    if (mapRef.current) {
-      setMapInstance(mapRef.current as unknown as maplibregl.Map);
-    }
-  }, [mapRef.current]);
 
   const handleLayerToggle = useCallback((id: string) => {
     setLayerVisibility((p) => ({ ...p, [id]: !p[id] }));
@@ -178,7 +171,7 @@ export default function HomePage() {
     mapSectionRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleSearchResult = useCallback((result: any) => {
+  const handleSearchResult = useCallback((result: SearchResult) => {
     if (result.lng && result.lat && mapRef.current) {
       const map = mapRef.current;
       

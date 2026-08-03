@@ -10,7 +10,7 @@ import { getAbsolutePublicUrl } from "@/lib/public-config";
 import { 
   ArrowLeft, Copy, Map, Database, Layers, 
   Globe, Code, Terminal, CheckCircle, ExternalLink,
-  QrCode, FileCode
+  FileCode
 } from "lucide-react";
 
 const publicClientEnvironment = {

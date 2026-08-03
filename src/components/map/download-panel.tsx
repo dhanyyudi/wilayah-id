@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   Download, 
-  FileJson, 
   FileSpreadsheet, 
   Loader2,
   Check,
@@ -17,7 +16,7 @@ import {
   Map as MapIcon,
   Trash2
 } from "lucide-react";
-import type { Feature, Polygon, MultiPolygon } from "geojson";
+import type { Feature } from "geojson";
 import type { LngLatBounds } from "maplibre-gl";
 
 interface DownloadPanelProps {
@@ -32,6 +31,17 @@ type DataType = "spatial" | "tabular" | null;
 type SpatialLevel = "regencies" | "districts" | "villages" | null;
 type TabularType = "regions" | "postal" | null;
 type AOIMode = "rectangle" | "polygon" | null;
+type DownloadRecord = Record<string, unknown>;
+
+interface RegionsResponse {
+  data?: DownloadRecord[];
+}
+
+function formatCSVValue(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  const text = String(value);
+  return text.includes(",") ? `"${text}"` : text;
+}
 
 // Calculate AOI size in square degrees (rough estimation)
 function getAOISizeSquareDeg(bounds: LngLatBounds | null | undefined): number {
@@ -121,14 +131,6 @@ export default function DownloadPanel({
     }
   };
 
-  const handleAOIDone = () => {
-    if (hasAOI) {
-      setAoiMode(null);
-      setStep("type");
-      if (onCreateAOI) onCreateAOI(null); // Stop drawing mode
-    }
-  };
-
   const handleClearAOI = () => {
     if (onClearAOI) onClearAOI();
     setStep("aoi");
@@ -182,20 +184,17 @@ export default function DownloadPanel({
           // Tabular: Use regions API
           const endpoint = "/api/v1/regions/provinces";
           const response = await fetch(endpoint);
-          const data = await response.json();
+          const data = await response.json() as RegionsResponse;
           
           // Convert to CSV
-          const items = data.data || [];
+          const items = data.data ?? [];
           if (items.length > 0) {
             const headers = Object.keys(items[0]).filter(h => h !== "geom" && h !== "geometry");
             const csv = [
               headers.join(","),
-              ...items.map((item: any) => 
+              ...items.map((item) =>
                 headers.map(h => {
-                  const val = item[h];
-                  return typeof val === "string" && val.includes(",") 
-                    ? `"${val}"` 
-                    : val;
+                  return formatCSVValue(item[h]);
                 }).join(",")
               ),
             ].join("\n");

@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Search, X, Loader2, MapPin, Hash } from "lucide-react";
 
-interface SearchResult {
+export interface SearchResult {
   kode: string;
   nama: string;
   level: string;

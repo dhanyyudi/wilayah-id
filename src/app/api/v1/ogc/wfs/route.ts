@@ -12,6 +12,7 @@ import {
   WFS_FEATURE_TYPES 
 } from '@/lib/ogc-utils';
 import { geoJSONToGML } from '@/lib/gml-utils';
+import type { GMLFeatureCollection, GMLGeometry } from '@/lib/gml-utils';
 import { getDb } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -139,7 +140,6 @@ async function handleGetFeature(params: Record<string, string>) {
   const outputFormat = params['OUTPUTFORMAT'] || 'application/geo+json';
   const maxFeatures = parseInt(params['MAXFEATURES'] || params['COUNT'] || '1000');
   const bbox = params['BBOX'];
-  const filter = params['FILTER'];
 
   // Validate feature type
   const featureType = WFS_FEATURE_TYPES[typeName.toLowerCase() as keyof typeof WFS_FEATURE_TYPES];
@@ -182,7 +182,7 @@ async function handleGetFeature(params: Record<string, string>) {
     const rows = await query;
 
     // Convert to GeoJSON
-    const features = rows.map((row: Record<string, unknown>) => {
+    const features: GMLFeatureCollection['features'] = rows.map((row: Record<string, unknown>) => {
       const props: Record<string, unknown> = {
         code: row.code,
         name: row.name,
@@ -192,13 +192,16 @@ async function handleGetFeature(params: Record<string, string>) {
       }
       return {
         type: 'Feature' as const,
-        id: row.code,
-        geometry: row.geometry,
+        id: row.code as string | number,
+        geometry: row.geometry as GMLGeometry,
         properties: props,
       };
     });
 
-    const geojson = {
+    const geojson: GMLFeatureCollection & {
+      numberMatched: number;
+      numberReturned: number;
+    } = {
       type: 'FeatureCollection',
       numberMatched: features.length,
       numberReturned: features.length,
@@ -210,7 +213,7 @@ async function handleGetFeature(params: Record<string, string>) {
     // Return in requested format
     if (outputFormat.includes('gml') || outputFormat.includes('xml')) {
       // Convert to GML format
-      const gml = geoJSONToGML(geojson as any, typeName);
+      const gml = geoJSONToGML(geojson, typeName);
       
       return new NextResponse(gml, {
         headers: {

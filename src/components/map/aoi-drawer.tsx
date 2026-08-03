@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useContext } from "react";
+import { useEffect, useRef, useContext } from "react";
 import maplibregl from "maplibre-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import type { Feature } from "geojson";
+import type { Feature, Position } from "geojson";
 
 // CSS for mapbox-gl-draw
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
@@ -104,7 +104,8 @@ export default function AOIDrawer({
     });
 
     // Add control to map
-    map.addControl(draw as any, "top-left");
+    const drawControl = draw as unknown as maplibregl.IControl;
+    map.addControl(drawControl, "top-left");
     drawRef.current = draw;
     isInitialized.current = true;
 
@@ -130,7 +131,7 @@ export default function AOIDrawer({
       map.off("draw.update", handleDrawUpdate);
       map.off("draw.delete", handleDrawDelete);
       try {
-        map.removeControl(draw as any);
+        map.removeControl(drawControl);
       } catch {
         // Ignore if already removed
       }
@@ -171,14 +172,14 @@ export default function AOIDrawer({
 export function getBoundsFromFeature(feature: Feature): maplibregl.LngLatBounds | null {
   if (!feature.geometry) return null;
 
-  const coords: number[][] = [];
+  const coords: Position[] = [];
   
   if (feature.geometry.type === "Polygon") {
     const poly = feature.geometry.coordinates[0]; // Outer ring
-    poly.forEach((coord) => coords.push(coord as number[]));
+    poly.forEach((coord) => coords.push(coord));
   } else if (feature.geometry.type === "MultiPolygon") {
     feature.geometry.coordinates.forEach((polygon) => {
-      polygon[0].forEach((coord) => coords.push(coord as number[]));
+      polygon[0].forEach((coord) => coords.push(coord));
     });
   }
 

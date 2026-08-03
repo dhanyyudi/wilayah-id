@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import type { Feature, FeatureCollection, Geometry } from "geojson";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,23 @@ interface DownloadByLevelProps {
 type DownloadBy = "province" | "regency" | "district" | null;
 type Level = "provinces" | "regencies" | "districts" | "villages";
 type Format = "geojson" | "csv";
+type DownloadRecord = Record<string, unknown>;
+
+interface DownloadFeature {
+  properties: DownloadRecord;
+}
+
+interface DownloadResponse extends DownloadRecord {
+  type?: string;
+  data?: DownloadRecord | DownloadRecord[];
+  features?: DownloadFeature[];
+}
+
+function formatCSVValue(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  const text = String(value);
+  return text.includes(",") ? `"${text}"` : text;
+}
 
 const PROVINCES = [
   { code: "11", name: "Aceh" },
@@ -175,21 +193,23 @@ export default function DownloadByLevel({ className }: DownloadByLevelProps) {
       }
       
       const response = await fetch(endpoint);
-      const data = await response.json();
+      const data = await response.json() as DownloadResponse;
       
       if (format === "geojson") {
         // Convert to GeoJSON format
-        let exportData;
+        let exportData: DownloadResponse | FeatureCollection<Geometry | null, DownloadRecord>;
         if (data.type === "Feature" || data.type === "FeatureCollection") {
           exportData = data;
         } else if (data.data) {
           const items = Array.isArray(data.data) ? data.data : [data.data];
           exportData = {
             type: "FeatureCollection",
-            features: items.map((item: any) => ({
+            features: items.map((item): Feature<Geometry | null, DownloadRecord> => ({
               type: "Feature",
-              properties: { ...item, geom: undefined, geometry: undefined },
-              geometry: item.geom || item.geometry || null,
+              properties: Object.fromEntries(
+                Object.entries(item).filter(([key]) => key !== "geom" && key !== "geometry"),
+              ),
+              geometry: (item.geom || item.geometry || null) as Geometry | null,
             })),
           };
         } else {
@@ -207,17 +227,22 @@ export default function DownloadByLevel({ className }: DownloadByLevelProps) {
         URL.revokeObjectURL(url);
       } else {
         // CSV format
-        let items = data.data || (data.features ? data.features.map((f: any) => f.properties) : [data]);
-        if (!Array.isArray(items)) items = [items];
+        let items: DownloadRecord[];
+        if (data.data) {
+          items = Array.isArray(data.data) ? data.data : [data.data];
+        } else if (data.features) {
+          items = data.features.map((feature) => feature.properties);
+        } else {
+          items = [data];
+        }
         
         if (items.length > 0) {
           const headers = Object.keys(items[0]).filter(h => h !== "geom" && h !== "geometry");
           const csv = [
             headers.join(","),
-            ...items.map((item: any) => 
+            ...items.map((item) =>
               headers.map(h => {
-                const val = item[h];
-                return typeof val === "string" && val.includes(",") ? `"${val}"` : val;
+                return formatCSVValue(item[h]);
               }).join(",")
             ),
           ].join("\n");

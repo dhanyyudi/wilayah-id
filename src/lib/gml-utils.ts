@@ -4,28 +4,28 @@
  */
 
 import { create } from 'xmlbuilder2';
+import type {
+  Feature,
+  FeatureCollection,
+  LineString,
+  MultiLineString,
+  MultiPoint,
+  MultiPolygon,
+  Point,
+  Polygon,
+  Position,
+} from 'geojson';
 
-interface GeoJSONFeature {
-  type: 'Feature';
-  id?: string | number;
-  geometry: {
-    type: string;
-    coordinates: number[] | number[][] | number[][][];
-  };
-  properties: Record<string, unknown>;
-}
-
-interface GeoJSONFeatureCollection {
-  type: 'FeatureCollection';
-  totalFeatures?: number;
-  features: GeoJSONFeature[];
-}
+export type GMLGeometry = Point | MultiPoint | LineString | MultiLineString | Polygon | MultiPolygon;
+type GMLFeature = Feature<GMLGeometry, Record<string, unknown>>;
+export type GMLFeatureCollection = FeatureCollection<GMLGeometry, Record<string, unknown>>;
+type XMLBuilder = ReturnType<typeof create>;
 
 /**
  * Generate GML 3.2 FeatureCollection from GeoJSON
  */
 export function geoJSONToGML(
-  geojson: GeoJSONFeatureCollection,
+  geojson: GMLFeatureCollection,
   featureType: string,
   namespace = 'http://wilayah.id/wfs'
 ): string {
@@ -74,25 +74,25 @@ export function geoJSONToGML(
 /**
  * Append geometry element in GML format
  */
-function appendGeometry(parent: any, geometry: GeoJSONFeature['geometry']) {
+function appendGeometry(parent: XMLBuilder, geometry: GMLGeometry) {
   const gml = parent.ele('gml:' + geometry.type);
   
   switch (geometry.type) {
     case 'Point': {
-      const coords = geometry.coordinates as number[];
+      const coords = geometry.coordinates;
       gml.ele('gml:pos').txt(`${coords[0]} ${coords[1]}`);
       break;
     }
     
     case 'LineString': {
-      const coords = geometry.coordinates as number[][];
+      const coords = geometry.coordinates;
       const posList = coords.map(c => `${c[0]} ${c[1]}`).join(' ');
       gml.ele('gml:posList').txt(posList);
       break;
     }
     
     case 'Polygon': {
-      const rings = geometry.coordinates as number[][][];
+      const rings = geometry.coordinates;
       rings.forEach((ring, index) => {
         const ringEle = index === 0 
           ? gml.ele('gml:exterior').ele('gml:LinearRing')
@@ -104,7 +104,7 @@ function appendGeometry(parent: any, geometry: GeoJSONFeature['geometry']) {
     }
     
     case 'MultiPolygon': {
-      const polygons = (geometry.coordinates as unknown) as number[][][][];
+      const polygons = geometry.coordinates;
       polygons.forEach(polygon => {
         const polygonEle = gml.ele('gml:polygonMember').ele('gml:Polygon');
         polygon.forEach((ring, index) => {
@@ -119,7 +119,7 @@ function appendGeometry(parent: any, geometry: GeoJSONFeature['geometry']) {
     }
     
     case 'MultiPoint': {
-      const points = geometry.coordinates as number[][];
+      const points = geometry.coordinates;
       points.forEach(point => {
         const pointEle = gml.ele('gml:pointMember').ele('gml:Point');
         pointEle.ele('gml:pos').txt(`${point[0]} ${point[1]}`);
@@ -128,7 +128,7 @@ function appendGeometry(parent: any, geometry: GeoJSONFeature['geometry']) {
     }
     
     case 'MultiLineString': {
-      const lines = geometry.coordinates as number[][][];
+      const lines = geometry.coordinates;
       lines.forEach(line => {
         const lineEle = gml.ele('gml:lineStringMember').ele('gml:LineString');
         const posList = line.map(c => `${c[0]} ${c[1]}`).join(' ');
@@ -142,7 +142,7 @@ function appendGeometry(parent: any, geometry: GeoJSONFeature['geometry']) {
 /**
  * Calculate bounds from features
  */
-function calculateBounds(features: GeoJSONFeature[]) {
+function calculateBounds(features: GMLFeature[]) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   
   features.forEach(feature => {
@@ -161,21 +161,19 @@ function calculateBounds(features: GeoJSONFeature[]) {
 /**
  * Extract all coordinates from geometry
  */
-function extractCoordinates(geometry: GeoJSONFeature['geometry']): number[][] {
+function extractCoordinates(geometry: GMLGeometry): Position[] {
   switch (geometry.type) {
     case 'Point':
-      return [geometry.coordinates as number[]];
+      return [geometry.coordinates];
     case 'LineString':
     case 'MultiPoint':
-      return geometry.coordinates as number[][];
+      return geometry.coordinates;
     case 'Polygon':
-      return (geometry.coordinates as number[][][]).flat();
+      return geometry.coordinates.flat();
     case 'MultiLineString':
-      return (geometry.coordinates as number[][][]).flat();
+      return geometry.coordinates.flat();
     case 'MultiPolygon':
-      return ((geometry.coordinates as unknown) as number[][][][]).flat(2);
-    default:
-      return [];
+      return geometry.coordinates.flat(2);
   }
 }
 

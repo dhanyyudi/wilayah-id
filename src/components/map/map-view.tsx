@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useMap } from "@/components/ui/map";
 import maplibregl from "maplibre-gl";
 
@@ -21,6 +21,166 @@ interface VectorLayerManagerProps {
   highlightedFeature?: { source: string; id: string } | null;
 }
 
+function addSources(map: maplibregl.Map, tilesBaseUrl: string) {
+  if (map.getSource("provinsi")) return;
+
+  const idBounds: [number, number, number, number] = [94.5, -11.5, 141.5, 6.5];
+
+  map.addSource("provinsi", {
+    type: "vector",
+    tiles: [`${tilesBaseUrl}/provinsi/{z}/{x}/{y}.pbf`],
+    minzoom: 3,
+    maxzoom: 9,
+    bounds: idBounds,
+    promoteId: "kode_prov",
+  });
+  map.addSource("kabupaten", {
+    type: "vector",
+    tiles: [`${tilesBaseUrl}/kabupaten/{z}/{x}/{y}.pbf`],
+    minzoom: 7,
+    maxzoom: 11,
+    bounds: idBounds,
+    promoteId: "kode_kab",
+  });
+  map.addSource("kecamatan", {
+    type: "vector",
+    tiles: [`${tilesBaseUrl}/kecamatan/{z}/{x}/{y}.pbf`],
+    minzoom: 10,
+    maxzoom: 12,
+    bounds: idBounds,
+    promoteId: "kode_kec",
+  });
+  map.addSource("desa", {
+    type: "vector",
+    tiles: [`${tilesBaseUrl}/desa/{z}/{x}/{y}.pbf`],
+    minzoom: 12,
+    maxzoom: 14,
+    bounds: idBounds,
+    promoteId: "kode_desa",
+  });
+}
+
+function addLayers(map: maplibregl.Map) {
+  if (map.getLayer("provinsi-fill")) return;
+
+  map.addLayer({
+    id: "provinsi-fill",
+    type: "fill",
+    source: "provinsi",
+    "source-layer": "provinsi",
+    paint: {
+      "fill-color": [
+        "case",
+        ["boolean", ["feature-state", "selected"], false],
+        "rgba(45, 212, 191, 0.4)",
+        ["boolean", ["feature-state", "hover"], false],
+        HOVER_COLOR,
+        LAYER_COLORS.provinsi.fill,
+      ],
+    },
+  });
+  map.addLayer({
+    id: "provinsi-line",
+    type: "line",
+    source: "provinsi",
+    "source-layer": "provinsi",
+    paint: { "line-color": LAYER_COLORS.provinsi.stroke, "line-width": LAYER_COLORS.provinsi.width },
+  });
+
+  map.addLayer({
+    id: "kabupaten-fill",
+    type: "fill",
+    source: "kabupaten",
+    "source-layer": "kabupaten",
+    paint: {
+      "fill-color": [
+        "case",
+        ["boolean", ["feature-state", "selected"], false],
+        "rgba(45, 212, 191, 0.4)",
+        ["boolean", ["feature-state", "hover"], false],
+        HOVER_COLOR,
+        LAYER_COLORS.kabupaten.fill,
+      ],
+    },
+  });
+  map.addLayer({
+    id: "kabupaten-line",
+    type: "line",
+    source: "kabupaten",
+    "source-layer": "kabupaten",
+    paint: { "line-color": LAYER_COLORS.kabupaten.stroke, "line-width": LAYER_COLORS.kabupaten.width },
+  });
+
+  map.addLayer({
+    id: "kecamatan-fill",
+    type: "fill",
+    source: "kecamatan",
+    "source-layer": "kecamatan",
+    paint: {
+      "fill-color": [
+        "case",
+        ["boolean", ["feature-state", "selected"], false],
+        "rgba(45, 212, 191, 0.4)",
+        ["boolean", ["feature-state", "hover"], false],
+        HOVER_COLOR,
+        LAYER_COLORS.kecamatan.fill,
+      ],
+    },
+  });
+  map.addLayer({
+    id: "kecamatan-line",
+    type: "line",
+    source: "kecamatan",
+    "source-layer": "kecamatan",
+    paint: { "line-color": LAYER_COLORS.kecamatan.stroke, "line-width": LAYER_COLORS.kecamatan.width },
+  });
+
+  map.addLayer({
+    id: "desa-fill",
+    type: "fill",
+    source: "desa",
+    "source-layer": "desa",
+    paint: {
+      "fill-color": [
+        "case",
+        ["boolean", ["feature-state", "selected"], false],
+        "rgba(45, 212, 191, 0.4)",
+        ["boolean", ["feature-state", "hover"], false],
+        HOVER_COLOR,
+        LAYER_COLORS.desa.fill,
+      ],
+    },
+  });
+  map.addLayer({
+    id: "desa-line",
+    type: "line",
+    source: "desa",
+    "source-layer": "desa",
+    paint: { "line-color": LAYER_COLORS.desa.stroke, "line-width": LAYER_COLORS.desa.width },
+  });
+}
+
+function setLayerVisibility(map: maplibregl.Map, layer: string, visible: boolean) {
+  const value = visible ? "visible" : "none";
+  if (map.getLayer(`${layer}-fill`)) map.setLayoutProperty(`${layer}-fill`, "visibility", value);
+  if (map.getLayer(`${layer}-line`)) map.setLayoutProperty(`${layer}-line`, "visibility", value);
+}
+
+function setHighlightedState(
+  map: maplibregl.Map,
+  feature: NonNullable<VectorLayerManagerProps["highlightedFeature"]>,
+  selected: boolean,
+) {
+  try {
+    map.setFeatureState(
+      { source: feature.source, sourceLayer: feature.source, id: feature.id },
+      { selected },
+    );
+  } catch {
+    // The source may not exist while a style is loading.
+  }
+}
+
 /**
  * Child component that lives inside <Map> and uses the useMap() hook
  * to add vector tile sources/layers, manage visibility, and handle interactions.
@@ -29,7 +189,6 @@ export default function VectorLayerManager({ layerVisibility, onFeatureClick, hi
   const { map, isLoaded } = useMap();
   const hoveredFeatureRef = useRef<{ source: string; id: number | string | undefined } | null>(null);
   const tooltipRef = useRef<maplibregl.Popup | null>(null);
-  const layersAddedRef = useRef(false);
   const visibilityRef = useRef(layerVisibility);
 
   // Keep ref in sync with prop
@@ -38,159 +197,6 @@ export default function VectorLayerManager({ layerVisibility, onFeatureClick, hi
   }, [layerVisibility]);
 
   const tilesBaseUrl = process.env.NEXT_PUBLIC_TILES_BASE_URL || (typeof window !== "undefined" ? `${window.location.origin}/tiles` : "/tiles");
-
-  // Add sources and layers once map is loaded / style changes
-  // --- helpers ---
-
-  function addSources(m: maplibregl.Map) {
-    if (m.getSource("provinsi")) return; // Already added
-
-    // Indonesia bounding box: [west, south, east, north]
-    const idBounds: [number, number, number, number] = [94.5, -11.5, 141.5, 6.5];
-
-    m.addSource("provinsi", {
-      type: "vector",
-      tiles: [`${tilesBaseUrl}/provinsi/{z}/{x}/{y}.pbf`],
-      minzoom: 3,
-      maxzoom: 9,
-      bounds: idBounds,
-      promoteId: "kode_prov",
-    });
-    m.addSource("kabupaten", {
-      type: "vector",
-      tiles: [`${tilesBaseUrl}/kabupaten/{z}/{x}/{y}.pbf`],
-      minzoom: 7,
-      maxzoom: 11,
-      bounds: idBounds,
-      promoteId: "kode_kab",
-    });
-    m.addSource("kecamatan", {
-      type: "vector",
-      tiles: [`${tilesBaseUrl}/kecamatan/{z}/{x}/{y}.pbf`],
-      minzoom: 10,
-      maxzoom: 12,
-      bounds: idBounds,
-      promoteId: "kode_kec",
-    });
-    m.addSource("desa", {
-      type: "vector",
-      tiles: [`${tilesBaseUrl}/desa/{z}/{x}/{y}.pbf`],
-      minzoom: 12,
-      maxzoom: 14,
-      bounds: idBounds,
-      promoteId: "kode_desa",
-    });
-  }
-
-  function addLayers(m: maplibregl.Map) {
-    if (m.getLayer("provinsi-fill")) return; // Already added
-
-    // Provinsi
-    m.addLayer({
-      id: "provinsi-fill",
-      type: "fill",
-      source: "provinsi",
-      "source-layer": "provinsi",
-      paint: {
-        "fill-color": [
-          "case",
-          ["boolean", ["feature-state", "selected"], false],
-          "rgba(45, 212, 191, 0.4)", // Neon Cyan Blinking
-          ["boolean", ["feature-state", "hover"], false],
-          HOVER_COLOR,
-          LAYER_COLORS.provinsi.fill,
-        ],
-      },
-    });
-    m.addLayer({
-      id: "provinsi-line",
-      type: "line",
-      source: "provinsi",
-      "source-layer": "provinsi",
-      paint: { "line-color": LAYER_COLORS.provinsi.stroke, "line-width": LAYER_COLORS.provinsi.width },
-    });
-
-    // Kabupaten
-    m.addLayer({
-      id: "kabupaten-fill",
-      type: "fill",
-      source: "kabupaten",
-      "source-layer": "kabupaten",
-      paint: {
-        "fill-color": [
-          "case",
-          ["boolean", ["feature-state", "selected"], false],
-          "rgba(45, 212, 191, 0.4)", // Neon Cyan Blinking
-          ["boolean", ["feature-state", "hover"], false],
-          HOVER_COLOR,
-          LAYER_COLORS.kabupaten.fill,
-        ],
-      },
-    });
-    m.addLayer({
-      id: "kabupaten-line",
-      type: "line",
-      source: "kabupaten",
-      "source-layer": "kabupaten",
-      paint: { "line-color": LAYER_COLORS.kabupaten.stroke, "line-width": LAYER_COLORS.kabupaten.width },
-    });
-
-    // Kecamatan
-    m.addLayer({
-      id: "kecamatan-fill",
-      type: "fill",
-      source: "kecamatan",
-      "source-layer": "kecamatan",
-      paint: {
-        "fill-color": [
-          "case",
-          ["boolean", ["feature-state", "selected"], false],
-          "rgba(45, 212, 191, 0.4)", // Neon Cyan Blinking
-          ["boolean", ["feature-state", "hover"], false],
-          HOVER_COLOR,
-          LAYER_COLORS.kecamatan.fill,
-        ],
-      },
-    });
-    m.addLayer({
-      id: "kecamatan-line",
-      type: "line",
-      source: "kecamatan",
-      "source-layer": "kecamatan",
-      paint: { "line-color": LAYER_COLORS.kecamatan.stroke, "line-width": LAYER_COLORS.kecamatan.width },
-    });
-
-    // Desa
-    m.addLayer({
-      id: "desa-fill",
-      type: "fill",
-      source: "desa",
-      "source-layer": "desa",
-      paint: {
-        "fill-color": [
-          "case",
-          ["boolean", ["feature-state", "selected"], false],
-          "rgba(45, 212, 191, 0.4)", // Neon Cyan Blinking
-          ["boolean", ["feature-state", "hover"], false],
-          HOVER_COLOR,
-          LAYER_COLORS.desa.fill,
-        ],
-      },
-    });
-    m.addLayer({
-      id: "desa-line",
-      type: "line",
-      source: "desa",
-      "source-layer": "desa",
-      paint: { "line-color": LAYER_COLORS.desa.stroke, "line-width": LAYER_COLORS.desa.width },
-    });
-  }
-
-  function setLayerVisibility(m: maplibregl.Map, layer: string, visible: boolean) {
-    const val = visible ? "visible" : "none";
-    if (m.getLayer(`${layer}-fill`)) m.setLayoutProperty(`${layer}-fill`, "visibility", val);
-    if (m.getLayer(`${layer}-line`)) m.setLayoutProperty(`${layer}-line`, "visibility", val);
-  }
 
   useEffect(() => {
     if (!map || !isLoaded) return;
@@ -201,7 +207,7 @@ export default function VectorLayerManager({ layerVisibility, onFeatureClick, hi
     // Check if sources were wiped
     try {
       if (!map.getSource("provinsi")) {
-        addSources(map);
+        addSources(map, tilesBaseUrl);
       }
     } catch (e) {
       console.error("Error adding sources:", e);
@@ -219,7 +225,7 @@ export default function VectorLayerManager({ layerVisibility, onFeatureClick, hi
     } catch (e) {
       console.error("Error adding custom map layers:", e);
     }
-  }, [map, isLoaded]); // Re-runs cleanly when isLoaded toggles during theme switch
+  }, [map, isLoaded, tilesBaseUrl]); // Re-runs cleanly when isLoaded toggles during theme switch
 
   // Cooperative scroll gestures: Ctrl/Cmd + scroll = zoom, plain scroll = scroll page
   useEffect(() => {
@@ -379,18 +385,7 @@ export default function VectorLayerManager({ layerVisibility, onFeatureClick, hi
     };
   }, [map, isLoaded]);
 
-  // Spatial Search Blinking Neon Highlight
-  const [blink, setBlink] = useState(false);
-  useEffect(() => {
-    if (!highlightedFeature) {
-      setBlink(false);
-      return;
-    }
-    const interval = setInterval(() => setBlink((b) => !b), 500);
-    return () => clearInterval(interval);
-  }, [highlightedFeature]);
-
-  // Apply blinking feature-state
+  // Apply and animate spatial-search feature state without render-only state.
   const prevHighlightRef = useRef(highlightedFeature);
   useEffect(() => {
     if (!map || !isLoaded) return;
@@ -402,24 +397,24 @@ export default function VectorLayerManager({ layerVisibility, onFeatureClick, hi
       prev.source !== highlightedFeature.source ||
       prev.id !== highlightedFeature.id
     )) {
-      try {
-        map.setFeatureState(
-          { source: prev.source, sourceLayer: prev.source, id: prev.id },
-          { selected: false }
-        );
-      } catch { /* source may not exist yet */ }
+      setHighlightedState(map, prev, false);
     }
     prevHighlightRef.current = highlightedFeature ?? undefined;
 
-    if (highlightedFeature) {
-      try {
-        map.setFeatureState(
-          { source: highlightedFeature.source, sourceLayer: highlightedFeature.source, id: highlightedFeature.id },
-          { selected: blink }
-        );
-      } catch { /* source may not exist yet */ }
-    }
-  }, [map, isLoaded, highlightedFeature, blink]);
+    if (!highlightedFeature) return;
+
+    let selected = false;
+    setHighlightedState(map, highlightedFeature, selected);
+    const interval = setInterval(() => {
+      selected = !selected;
+      setHighlightedState(map, highlightedFeature, selected);
+    }, 500);
+
+    return () => {
+      clearInterval(interval);
+      setHighlightedState(map, highlightedFeature, false);
+    };
+  }, [map, isLoaded, highlightedFeature]);
 
   // This component renders nothing — it only manages map state via hooks
   return null;
