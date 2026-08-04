@@ -528,7 +528,7 @@ export default function HomePage() {
                   <optgroup label="OGC GIS Services">
                     <option value="/ogc/wms?SERVICE=WMS&REQUEST=GetCapabilities">WMS GetCapabilities</option>
                     <option value="/ogc/wfs?SERVICE=WFS&REQUEST=GetCapabilities">WFS GetCapabilities</option>
-                    <option value="/ogc/wfs?SERVICE=WFS&REQUEST=GetFeature&TYPENAME=provinces&OUTPUTFORMAT=application/json">WFS GetFeature (GeoJSON)</option>
+                    <option value="/ogc/wfs?SERVICE=WFS&REQUEST=GetFeature&TYPENAME=provinces&COUNT=1000&OUTPUTFORMAT=application/json">WFS GetFeature (GeoJSON)</option>
                   </optgroup>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />

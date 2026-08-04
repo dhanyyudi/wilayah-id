@@ -82,11 +82,13 @@ const ALLOWED_PARAMS_BY_REQUEST: Record<string, readonly string[]> = {
   GETFEATUREINFO: [
     ...COMMON_REQUEST_PARAMS,
     'layers',
+    'styles',
     'query_layers',
     'crs',
     'bbox',
     'width',
     'height',
+    'format',
     'i',
     'j',
     'info_format',
@@ -441,6 +443,9 @@ async function handleGetMap(params: Record<string, string>) {
 async function handleGetFeatureInfo(params: Record<string, string>) {
   requireVersion(params);
   const { layers, bbox, width, height } = parseSharedMapParams(params);
+  // GetFeatureInfo embeds the full GetMap parameter set (WMS 1.3.0 §7.4),
+  // so STYLES is accepted and validated exactly as in GetMap.
+  validateStyles(params['STYLES'], layers.length);
   const queryLayers = parseLayers(
     requireParam(params, 'QUERY_LAYERS'),
     'query_layers',

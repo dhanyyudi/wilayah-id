@@ -177,6 +177,66 @@ describe("WFS GetCapabilities", () => {
       String(byName.ImplementsResultPaging["ows:AllowedValues"]["ows:Value"]),
     ).toBe("TRUE");
   });
+
+  it("advertises AcceptVersions and AcceptFormats on GetCapabilities", async () => {
+    const response = await GET(req("?service=WFS&request=GetCapabilities"));
+    const doc = await parseXml(response);
+    const capabilities = doc["wfs:WFS_Capabilities"] ?? doc["WFS_Capabilities"];
+    const operations = capabilities["ows:OperationsMetadata"]["ows:Operation"];
+    const list = Array.isArray(operations) ? operations : [operations];
+    const getCapabilities = list.find(
+      (op: ParsedXml) => op["@_name"] === "GetCapabilities",
+    );
+    expect(getCapabilities).toBeTruthy();
+    const parameters = getCapabilities["ows:Parameter"];
+    const params = Array.isArray(parameters) ? parameters : [parameters];
+    const byName = Object.fromEntries(
+      params.map((p: ParsedXml) => [
+        p["@_name"],
+        String(p["ows:AllowedValues"]["ows:Value"]),
+      ]),
+    );
+    expect(byName.AcceptVersions).toBe("2.0.0");
+    expect(byName.AcceptFormats).toBe("text/xml");
+  });
+});
+
+describe("WFS GetCapabilities ACCEPTVERSIONS/ACCEPTFORMATS negotiation", () => {
+  it("accepts ACCEPTVERSIONS containing 2.0.0", async () => {
+    for (const accepted of ["2.0.0", "1.0.0,2.0.0", "2.0.0,3.0.0"]) {
+      const response = await GET(
+        req(`?service=WFS&request=GetCapabilities&acceptversions=${accepted}`),
+      );
+      expect(response.status).toBe(200);
+    }
+  });
+
+  it("rejects an ACCEPTVERSIONS list without 2.0.0 with VersionNegotiationFailed", async () => {
+    const response = await GET(
+      req("?service=WFS&request=GetCapabilities&acceptversions=1.1.0"),
+    );
+    expect(response.status).toBe(400);
+    const doc = await parseXml(response);
+    expectExceptionReport(doc, "VersionNegotiationFailed", "AcceptVersions");
+  });
+
+  it("accepts ACCEPTFORMATS with an XML media type", async () => {
+    for (const accepted of ["text/xml", "application/gml+xml", "text/html,text/xml"]) {
+      const response = await GET(
+        req(`?service=WFS&request=GetCapabilities&acceptformats=${encodeURIComponent(accepted)}`),
+      );
+      expect(response.status).toBe(200);
+    }
+  });
+
+  it("rejects ACCEPTFORMATS without an XML media type", async () => {
+    const response = await GET(
+      req("?service=WFS&request=GetCapabilities&acceptformats=image/png"),
+    );
+    expect(response.status).toBe(400);
+    const doc = await parseXml(response);
+    expectExceptionReport(doc, "InvalidParameterValue", "AcceptFormats");
+  });
 });
 
 describe("WFS DescribeFeatureType", () => {

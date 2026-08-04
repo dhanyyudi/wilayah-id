@@ -158,7 +158,7 @@ export default function DownloadPanel({
       if (dataType === "spatial" && spatialLevel && aoiBounds) {
         // Spatial data - use WFS with AOI bounds
         const bbox = `${aoiBounds.getWest()},${aoiBounds.getSouth()},${aoiBounds.getEast()},${aoiBounds.getNorth()}`;
-        const endpoint = `/api/v1/ogc/wfs?SERVICE=WFS&REQUEST=GetFeature&TYPENAME=${spatialLevel}&BBOX=${bbox}&OUTPUTFORMAT=application/json`;
+        const endpoint = `/api/v1/ogc/wfs?SERVICE=WFS&REQUEST=GetFeature&TYPENAME=${spatialLevel}&BBOX=${bbox}&COUNT=1000&OUTPUTFORMAT=application/json`;
         
         const response = await fetch(endpoint);
         const data = await response.json();

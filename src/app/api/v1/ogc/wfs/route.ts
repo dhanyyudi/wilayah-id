@@ -101,7 +101,11 @@ const COMMON_REQUEST_PARAMS = [
  * value-validated by the shared parseFeatureQuery in the handler.
  */
 const ALLOWED_PARAMS_BY_REQUEST: Record<string, readonly string[]> = {
-  GETCAPABILITIES: COMMON_REQUEST_PARAMS,
+  GETCAPABILITIES: [
+    ...COMMON_REQUEST_PARAMS,
+    'acceptversions',
+    'acceptformats',
+  ],
   DESCRIBEFEATURETYPE: [
     ...COMMON_REQUEST_PARAMS,
     'typename',
@@ -196,7 +200,7 @@ export async function GET(request: NextRequest) {
 
     switch (normalizedRequest) {
       case 'GETCAPABILITIES':
-        return handleGetCapabilities(request);
+        return handleGetCapabilities(request, params);
 
       case 'DESCRIBEFEATURETYPE':
         return handleDescribeFeatureType(params);
@@ -252,9 +256,40 @@ function wfsExceptionResponse(error: unknown): NextResponse {
 }
 
 /**
- * Handle GetCapabilities request
+ * Handle GetCapabilities request.
+ *
+ * ACCEPTVERSIONS and ACCEPTFORMATS are honoured exactly as the capabilities
+ * document advertises them: the version list must contain 2.0.0 (otherwise
+ * VersionNegotiationFailed) and the format list must contain an XML media
+ * type (otherwise InvalidParameterValue).
  */
-function handleGetCapabilities(request: NextRequest) {
+function handleGetCapabilities(
+  request: NextRequest,
+  params: Record<string, string>,
+) {
+  const acceptVersions = params['ACCEPTVERSIONS'];
+  if (acceptVersions !== undefined) {
+    const versions = acceptVersions.split(',').map((v) => v.trim());
+    if (!versions.includes(WFS_VERSION)) {
+      throw new OgcError(
+        'VersionNegotiationFailed',
+        `None of the accepted versions [${versions.join(', ')}] is supported; only ${WFS_VERSION} is implemented`,
+        { locator: 'AcceptVersions' },
+      );
+    }
+  }
+
+  const acceptFormats = params['ACCEPTFORMATS'];
+  if (acceptFormats !== undefined) {
+    const formats = acceptFormats.split(',').map((f) => f.trim().toLowerCase());
+    if (!formats.some((f) => f.includes('xml'))) {
+      throw invalidParameterValue(
+        'AcceptFormats',
+        `None of the accepted formats [${formats.join(', ')}] is supported; GetCapabilities is served as text/xml`,
+      );
+    }
+  }
+
   const baseUrl = `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('host')}`;
   const xml = generateWFSCapabilities(baseUrl);
 

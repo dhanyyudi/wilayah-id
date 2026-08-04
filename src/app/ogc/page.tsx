@@ -251,7 +251,7 @@ URL: ${baseUrl}/wms`}
                     </li>
                     <li className="flex gap-3">
                       <span className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-xs font-medium">5</span>
-                      <span>Pilih layer (provinsi, kabupaten, kecamatan, desa)</span>
+                      <span>Pilih layer (provinces, regencies, districts, villages)</span>
                     </li>
                     <li className="flex gap-3">
                       <span className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-xs font-medium">6</span>
@@ -349,16 +349,17 @@ WFS: ${baseUrl}/wfs`}
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <CodeBlock title="WFS GetFeature (cURL)">
-{`# Get all provinces as GeoJSON
-curl "${baseUrl}/wfs?SERVICE=WFS&REQUEST=GetFeature&TYPENAME=provinces" \
+{`# Get all provinces as GeoJSON (default COUNT is 10, so pass COUNT=1000
+# — the advertised maximum — to retrieve all 38 provinces in one call)
+curl "${baseUrl}/wfs?SERVICE=WFS&REQUEST=GetFeature&TYPENAME=provinces&COUNT=1000" \\
   -H "Accept: application/geo+json"
 
 # Get regencies in Jakarta area (with BBOX filter)
-curl "${baseUrl}/wfs?SERVICE=WFS&REQUEST=GetFeature&TYPENAME=regencies&BBOX=106.7,-6.4,107.0,-6.1" \
+curl "${baseUrl}/wfs?SERVICE=WFS&REQUEST=GetFeature&TYPENAME=regencies&BBOX=106.7,-6.4,107.0,-6.1&COUNT=1000" \\
   -H "Accept: application/geo+json"
 
-# WMS GetFeatureInfo
-curl "${baseUrl}/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&LAYERS=provinsi&QUERY_LAYERS=provinsi&BBOX=106.8,-6.3,107.0,-6.1&WIDTH=800&HEIGHT=600&X=400&Y=300&INFO_FORMAT=application/json"`}
+# WMS GetFeatureInfo (VERSION, I/J pixel indices, and QUERY_LAYERS required)
+curl "${baseUrl}/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&VERSION=1.3.0&LAYERS=provinces&QUERY_LAYERS=provinces&CRS=CRS:84&BBOX=106.7,-6.4,107.0,-6.1&WIDTH=800&HEIGHT=600&I=400&J=300&INFO_FORMAT=application/json"`}
                   </CodeBlock>
                 </CardContent>
               </Card>

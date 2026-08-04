@@ -435,4 +435,16 @@ describe("WMS GetFeatureInfo", () => {
     const response = await GET(req(GFI.replace("query_layers=provinces&", "")));
     await expectServiceException(response, 400, "MissingParameterValue", "query_layers");
   });
+
+  it("accepts the embedded GetMap parameters STYLES and FORMAT (WMS 1.3.0 §7.4)", async () => {
+    for (const extra of ["&styles=", "&format=image/png", "&styles=&format=image/png"]) {
+      const response = await GET(req(`${GFI}${extra}`));
+      expect(response.status).toBe(200);
+    }
+  });
+
+  it("validates STYLES on GetFeatureInfo exactly as in GetMap", async () => {
+    const response = await GET(req(`${GFI}&styles=fancy`));
+    await expectServiceException(response, 400, "StyleNotDefined", "styles");
+  });
 });

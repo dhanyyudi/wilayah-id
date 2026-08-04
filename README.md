@@ -255,7 +255,7 @@ Perhatian saat menjalankan smoke terhadap server lokal: middleware me-rewrite
 setiap permintaan `/api/*` ke `WILAYAH_API_ORIGIN` yang default-nya menunjuk
 ke origin API produksi, sehingga smoke bisa diam-diam menguji produksi dan
 melaporkan hasil hijau palsu. Untuk target lokal, jalankan server dengan
-origin yang menunjuk ke dirinya sendiri (origin HTTPS ditolak pada
+origin yang menunjuk ke dirinya sendiri (origin HTTP/non-HTTPS ditolak pada
 `NODE_ENV=production`, jadi gunakan `pnpm dev`):
 
 ```bash

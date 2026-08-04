@@ -10,7 +10,7 @@
 # API origin. Running this script against a local server that was started
 # without overrides silently smoke-tests production instead of the local
 # build. When targeting a local server, start it with self-pointed origins
-# (HTTPS origins are rejected under NODE_ENV=production, so use pnpm dev):
+# (non-HTTPS origins are rejected under NODE_ENV=production, so use pnpm dev):
 #
 #   WILAYAH_API_ORIGIN=http://127.0.0.1:3000 \
 #   WILAYAH_TILES_ORIGIN=http://127.0.0.1:3000 \
