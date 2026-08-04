@@ -62,9 +62,48 @@ jobs:
       - name: Validate Wrangler deployment bundle
         run: pnpm exec wrangler deploy --dry-run
 
+  ogc-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgis:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: wilayah_id_ogc_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d wilayah_id_ogc_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+
+      - name: Enable pinned pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.30.3 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run OGC integration tests against disposable PostGIS
+        env:
+          OGC_TEST_DATABASE_URL: >-
+            postgresql://postgres:postgres@127.0.0.1:5432/wilayah_id_ogc_test?options=-csearch_path%3Dogc_test,public
+        run: pnpm test tests/ogc
+
   build-container:
     if: inputs.skip_container != true
-    needs: verify-web
+    needs: [verify-web, ogc-integration]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

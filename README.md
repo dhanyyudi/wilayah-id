@@ -180,14 +180,76 @@ Regional and OGC API base URL: `/api/v1`. The health endpoint remains
 
 ### OGC Services
 
+Empat koleksi tetap tersedia di semua protokol OGC: `provinces`,
+`regencies`, `districts`, dan `villages`.
+
+#### OGC API Features (Core + GeoJSON)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/ogc/features` | Landing page (JSON, atau HTML dengan `f=html`) |
+| GET | `/ogc/features/conformance` | Deklarasi conformance classes |
+| GET | `/ogc/features/api` | Dokumen OpenAPI 3.0 |
+| GET | `/ogc/features/collections` | Daftar 4 koleksi |
+| GET | `/ogc/features/collections/:collectionId` | Metadata satu koleksi |
+| GET | `/ogc/features/collections/:collectionId/items` | FeatureCollection terbatas |
+| GET | `/ogc/features/collections/:collectionId/items/:featureId` | Satu fitur |
+
+Parameter `items`: `bbox` (CRS84: minLon,minLat,maxLon,maxLat), `limit`
+(default 10, maksimum 1.000), `offset`, `properties`, `crs` (hanya CRS84),
+dan `f` (`json`, `geojson`, `html`). Geometri selalu disajikan dalam CRS84
+(lon, lat).
+
+#### WFS 2.0
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/ogc/wfs?SERVICE=WFS&REQUEST=GetCapabilities` | WFS 2.0 Capabilities XML |
+| GET | `/ogc/wfs?SERVICE=WFS&REQUEST=GetFeature&...` | Fitur sebagai GeoJSON atau GML 3.2 |
+| GET | `/ogc/wfs?SERVICE=WFS&REQUEST=DescribeFeatureType&...` | Skema XML per tipe fitur |
+
+`GetFeature` menerima `TYPENAMES` (satu tipe per panggilan), `COUNT` /
+`STARTINDEX` (batas sama: default 10, maksimum 1.000), `BBOX`,
+`SRSNAME` (hanya CRS84 / EPSG:4326), dan `OUTPUTFORMAT`
+(`application/geo+json` atau `application/gml+xml; version=3.2`).
+
+#### WMS 1.3.0
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/ogc/wms?SERVICE=WMS&REQUEST=GetCapabilities` | WMS 1.3.0 Capabilities XML |
-| GET | `/ogc/wms?SERVICE=WMS&REQUEST=GetMap&...` | Render tile raster |
-| GET | `/ogc/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&...` | Info fitur pada koordinat |
-| GET | `/ogc/wfs?SERVICE=WFS&REQUEST=GetCapabilities` | WFS 2.0 Capabilities XML |
-| GET | `/ogc/wfs?SERVICE=WFS&REQUEST=GetFeature&...` | Download fitur sebagai GeoJSON |
-| GET | `/ogc/wfs?SERVICE=WFS&REQUEST=DescribeFeatureType&...` | Deskripsi skema layer |
+| GET | `/ogc/wms?SERVICE=WMS&REQUEST=GetMap&...` | Render peta raster (PNG/JPEG) |
+| GET | `/ogc/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&...` | Info fitur pada piksel (I/J) |
+
+`GetMap` me-render gambar sungguhan dari PostGIS (bukan placeholder) dengan
+`FORMAT=image/png` atau `image/jpeg`, maksimum 2.048×2.048 piksel
+(4.194.304 piksel total). Urutan sumbu mengikuti WMS 1.3.0: `CRS:84`
+memakai lon,lat sedangkan `EPSG:4326` memakai lat,lon. `GetFeatureInfo`
+memakai indeks piksel `I`/`J` dan predikat `ST_Covers`, sehingga titik yang
+tepat di batas poligon tetap dihitung.
+
+#### Perilaku truthful dan bounded
+
+Semua layanan OGC menolak parameter yang tidak didukung dengan exception
+sesuai standar (`ows:ExceptionReport` untuk WFS, `ServiceExceptionReport`
+untuk WMS, dokumen exception JSON untuk OGC API Features) — tidak ada
+parameter yang diam-diam diabaikan. Khususnya:
+
+- `FILTER` (WFS) ditolak dengan `OperationNotSupported` sampai tata bahasa
+  filter yang aman tersedia.
+- `datetime` ditolak dengan `InvalidParameterValue` karena data tidak
+  memiliki field temporal.
+- `STYLES` selain style `default` ditolak dengan `StyleNotDefined`; layer
+  yang tidak dikenal ditolak dengan `LayerNotDefined`.
+- Kesalahan database tidak pernah bocor ke klien; klien menerima
+  `NoApplicableCode` generik.
+
+Smoke check publik untuk seluruh layanan tersedia di
+`scripts/smoke-public-geospatial.sh`:
+
+```bash
+BASE_URL=http://127.0.0.1:3000 bash scripts/smoke-public-geospatial.sh
+```
 
 ### Response Format
 
