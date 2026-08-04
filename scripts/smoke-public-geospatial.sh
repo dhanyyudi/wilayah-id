@@ -5,6 +5,22 @@
 # Usage:
 #   BASE_URL=http://127.0.0.1:3000 bash scripts/smoke-public-geospatial.sh
 #
+# CAVEAT — false green against production: src/middleware.ts rewrites every
+# /api/* request to WILAYAH_API_ORIGIN, which defaults to the PRODUCTION
+# API origin. Running this script against a local server that was started
+# without overrides silently smoke-tests production instead of the local
+# build. When targeting a local server, start it with self-pointed origins
+# (HTTPS origins are rejected under NODE_ENV=production, so use pnpm dev):
+#
+#   WILAYAH_API_ORIGIN=http://127.0.0.1:3000 \
+#   WILAYAH_TILES_ORIGIN=http://127.0.0.1:3000 \
+#   NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000 \
+#   DATABASE_URL=... pnpm dev -p 3000
+#
+# Tell-tale of a production rewrite: response headers contain
+# `x-middleware-rewrite: https://wilayah-id-api...` and `server: openresty`.
+# No overrides are needed when BASE_URL points at a real deployment.
+#
 # Validators: JSON via Ajv (node), XML via xmllint with python3 /
 # fast-xml-parser fallback, images via Sharp (node) with ImageMagick
 # `identify` fallback, GeoJSON via ogrinfo with an Ajv fallback. Optional

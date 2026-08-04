@@ -251,6 +251,24 @@ Smoke check publik untuk seluruh layanan tersedia di
 BASE_URL=http://127.0.0.1:3000 bash scripts/smoke-public-geospatial.sh
 ```
 
+Perhatian saat menjalankan smoke terhadap server lokal: middleware me-rewrite
+setiap permintaan `/api/*` ke `WILAYAH_API_ORIGIN` yang default-nya menunjuk
+ke origin API produksi, sehingga smoke bisa diam-diam menguji produksi dan
+melaporkan hasil hijau palsu. Untuk target lokal, jalankan server dengan
+origin yang menunjuk ke dirinya sendiri (origin HTTPS ditolak pada
+`NODE_ENV=production`, jadi gunakan `pnpm dev`):
+
+```bash
+WILAYAH_API_ORIGIN=http://127.0.0.1:3000 \
+WILAYAH_TILES_ORIGIN=http://127.0.0.1:3000 \
+NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000 \
+DATABASE_URL=... pnpm dev -p 3000
+```
+
+Tanda bahwa request di-rewrite ke produksi: header respons memuat
+`x-middleware-rewrite: https://wilayah-id-api...` dan `server: openresty`.
+Override tidak diperlukan bila `BASE_URL` menunjuk ke deployment sungguhan.
+
 ### Response Format
 
 ```json
