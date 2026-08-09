@@ -6,21 +6,24 @@
  * [minLon, minLat, maxLon, maxLat]; WMS 1.3.0 EPSG:4326 axis handling is the
  * caller's responsibility.
  *
- * Rendering pipeline: one bounded PostGIS query per layer (intersection
- * filter, clip to the requested envelope, simplify at a pixel-derived
- * tolerance, hard row cap), GeoJSON projection to a bounded RGBA canvas,
- * then pure-JavaScript PNG or JPEG encoding. Dimension and pixel limits are
- * enforced before any image buffer is allocated.
+ * This module owns WMS validation, bounded PostGIS queries, and capabilities.
+ * Pure rasterization and image encoding live in wms-raster.ts.
  */
 
-import { zlibSync } from "fflate";
-import { encode as encodeJpeg } from "jpeg-js";
 import { create } from "xmlbuilder2";
-import type { Geometry, MultiPolygon, Polygon, Position } from "geojson";
+import type { Geometry } from "geojson";
 import { getDb, type DbQueryFunction } from "../db";
 import { COLLECTION_IDS, findCollection, type CollectionId } from "./catalog";
 import { invalidParameterValue, sanitizedStoreError } from "./errors";
 import type { Bbox } from "./params";
+import {
+  encodeRaster,
+  rasterizeLayers,
+  type RasterLayer,
+  type WmsImageFormat,
+} from "./wms-raster";
+
+export type { WmsImageFormat } from "./wms-raster";
 
 /** WMS service limits, also advertised in GetCapabilities. */
 export const WMS_MAX_DIMENSION = 2048;
@@ -28,8 +31,6 @@ export const WMS_MAX_PIXELS = 4194304;
 
 /** Hard cap on features drawn per layer, keeping render cost bounded. */
 export const MAX_FEATURES_PER_LAYER = 5000;
-
-export type WmsImageFormat = "image/png" | "image/jpeg";
 
 export interface WmsMapRequest {
   /** Bounding box in CRS84 axis order: [minLon, minLat, maxLon, maxLat]. */
@@ -40,24 +41,6 @@ export interface WmsMapRequest {
   transparent: boolean;
   format: WmsImageFormat;
 }
-
-export interface LayerGeometries {
-  id: CollectionId;
-  geometries: Geometry[];
-}
-
-/**
- * The single default style per layer. Only this style exists; the route
- * rejects any other STYLES value with StyleNotDefined.
- */
-const LAYER_STYLES: Record<CollectionId, { fill: string; stroke: string }> = {
-  provinces: { fill: "#4c78a8", stroke: "#2f4b7c" },
-  regencies: { fill: "#72b7b2", stroke: "#3a7d78" },
-  districts: { fill: "#f2a65a", stroke: "#a8641c" },
-  villages: { fill: "#e45756", stroke: "#8f2f2e" },
-};
-
-const FILL_OPACITY = 0.45;
 
 /** Service-wide geographic extent of the source data (CRS84). */
 const SERVICE_EXTENT: Bbox = [95, -11, 141, 6];
@@ -91,359 +74,6 @@ function quoteIdentifier(identifier: string): string {
 }
 
 /**
- * Projects GeoJSON polygonal geometries into an SVG document sized exactly
- * to the requested image. Layers are drawn in the given order, so the first
- * layer ends up at the bottom of the stack, as WMS requires.
- */
-export function buildMapSvg(
-  layers: LayerGeometries[],
-  bbox: Bbox,
-  width: number,
-  height: number,
-): string {
-  const [minLon, minLat, maxLon, maxLat] = bbox;
-  const spanLon = maxLon - minLon;
-  const spanLat = maxLat - minLat;
-
-  const project = ([lon, lat]: Position): string => {
-    const x = Math.round(((lon - minLon) / spanLon) * width * 100) / 100;
-    const y = Math.round((1 - (lat - minLat) / spanLat) * height * 100) / 100;
-    return `${x},${y}`;
-  };
-
-  const ringToPath = (ring: Position[]): string =>
-    `M${ring.map(project).join("L")}Z`;
-
-  const geometryToPath = (geometry: Geometry): string => {
-    if (geometry.type === "Polygon") {
-      return (geometry as Polygon).coordinates.map(ringToPath).join(" ");
-    }
-    if (geometry.type === "MultiPolygon") {
-      return (geometry as MultiPolygon).coordinates
-        .map((polygon) => polygon.map(ringToPath).join(" "))
-        .join(" ");
-    }
-    return "";
-  };
-
-  const paths: string[] = [];
-  for (const layer of layers) {
-    const style = LAYER_STYLES[layer.id];
-    for (const geometry of layer.geometries) {
-      const d = geometryToPath(geometry);
-      if (!d) {
-        continue;
-      }
-      paths.push(
-        `<path data-layer="${layer.id}" d="${d}" fill="${style.fill}" fill-opacity="${FILL_OPACITY}" fill-rule="evenodd" stroke="${style.stroke}" stroke-width="1"/>`,
-      );
-    }
-  }
-
-  return (
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">` +
-    paths.join("") +
-    `</svg>`
-  );
-}
-
-interface PixelColor {
-  red: number;
-  green: number;
-  blue: number;
-}
-
-const PNG_SIGNATURE = new Uint8Array([
-  0x89,
-  0x50,
-  0x4e,
-  0x47,
-  0x0d,
-  0x0a,
-  0x1a,
-  0x0a,
-]);
-
-function parseHexColor(value: string): PixelColor {
-  return {
-    red: Number.parseInt(value.slice(1, 3), 16),
-    green: Number.parseInt(value.slice(3, 5), 16),
-    blue: Number.parseInt(value.slice(5, 7), 16),
-  };
-}
-
-function projectPosition(
-  [lon, lat]: Position,
-  bbox: Bbox,
-  width: number,
-  height: number,
-): [number, number] {
-  const [minLon, minLat, maxLon, maxLat] = bbox;
-  return [
-    ((lon - minLon) / (maxLon - minLon)) * width,
-    (1 - (lat - minLat) / (maxLat - minLat)) * height,
-  ];
-}
-
-function blendPixel(
-  data: Uint8Array,
-  offset: number,
-  color: PixelColor,
-  alpha: number,
-): void {
-  const sourceAlpha = alpha / 255;
-  const destinationAlpha = data[offset + 3] / 255;
-  const outputAlpha = sourceAlpha + destinationAlpha * (1 - sourceAlpha);
-  if (outputAlpha === 0) {
-    return;
-  }
-
-  data[offset] = Math.round(
-    (color.red * sourceAlpha +
-      data[offset] * destinationAlpha * (1 - sourceAlpha)) /
-      outputAlpha,
-  );
-  data[offset + 1] = Math.round(
-    (color.green * sourceAlpha +
-      data[offset + 1] * destinationAlpha * (1 - sourceAlpha)) /
-      outputAlpha,
-  );
-  data[offset + 2] = Math.round(
-    (color.blue * sourceAlpha +
-      data[offset + 2] * destinationAlpha * (1 - sourceAlpha)) /
-      outputAlpha,
-  );
-  data[offset + 3] = Math.round(outputAlpha * 255);
-}
-
-function drawFilledPolygon(
-  data: Uint8Array,
-  width: number,
-  height: number,
-  rings: Position[][],
-  bbox: Bbox,
-  color: PixelColor,
-): void {
-  const projectedRings = rings.map((ring) =>
-    ring.map((position) => projectPosition(position, bbox, width, height)),
-  );
-  const allPoints = projectedRings.flat();
-  if (allPoints.length < 3) {
-    return;
-  }
-
-  const minY = Math.max(
-    0,
-    Math.floor(Math.min(...allPoints.map(([, y]) => y))),
-  );
-  const maxY = Math.min(
-    height - 1,
-    Math.ceil(Math.max(...allPoints.map(([, y]) => y))),
-  );
-
-  // Scanline filling uses the even-odd rule across all rings, so interior
-  // holes remain transparent without requiring a separate polygon library.
-  for (let y = minY; y <= maxY; y += 1) {
-    const scanY = y + 0.5;
-    const intersections: number[] = [];
-    for (const ring of projectedRings) {
-      for (let index = 0; index < ring.length; index += 1) {
-        const [x1, y1] = ring[index];
-        const [x2, y2] = ring[(index + 1) % ring.length];
-        if ((y1 > scanY) !== (y2 > scanY)) {
-          intersections.push(x1 + ((scanY - y1) * (x2 - x1)) / (y2 - y1));
-        }
-      }
-    }
-    intersections.sort((left, right) => left - right);
-    for (let index = 0; index + 1 < intersections.length; index += 2) {
-      const start = Math.max(0, Math.ceil(intersections[index] - 0.5));
-      const end = Math.min(
-        width - 1,
-        Math.ceil(intersections[index + 1] - 0.5) - 1,
-      );
-    for (let x = start; x <= end; x += 1) {
-        blendPixel(data, (y * width + x) * 4, color, FILL_OPACITY * 255);
-      }
-    }
-  }
-}
-
-function drawStroke(
-  data: Uint8Array,
-  width: number,
-  height: number,
-  [x1, y1]: [number, number],
-  [x2, y2]: [number, number],
-  color: PixelColor,
-): void {
-  const minX = Math.max(0, Math.floor(Math.min(x1, x2) - 1));
-  const maxX = Math.min(width - 1, Math.ceil(Math.max(x1, x2) + 1));
-  const minY = Math.max(0, Math.floor(Math.min(y1, y2) - 1));
-  const maxY = Math.min(height - 1, Math.ceil(Math.max(y1, y2) + 1));
-  const deltaX = x2 - x1;
-  const deltaY = y2 - y1;
-  const lengthSquared = deltaX * deltaX + deltaY * deltaY;
-
-  for (let y = minY; y <= maxY; y += 1) {
-    for (let x = minX; x <= maxX; x += 1) {
-      const pointX = x + 0.5;
-      const pointY = y + 0.5;
-      const projection =
-        lengthSquared === 0
-          ? 0
-          : Math.max(
-              0,
-              Math.min(
-                1,
-                ((pointX - x1) * deltaX + (pointY - y1) * deltaY) /
-                  lengthSquared,
-              ),
-            );
-      const closestX = x1 + projection * deltaX;
-      const closestY = y1 + projection * deltaY;
-      if ((pointX - closestX) ** 2 + (pointY - closestY) ** 2 <= 0.5 ** 2) {
-        blendPixel(data, (y * width + x) * 4, color, 255);
-      }
-    }
-  }
-}
-
-function rasterizeLayers(
-  layers: LayerGeometries[],
-  bbox: Bbox,
-  width: number,
-  height: number,
-  format: WmsImageFormat,
-  transparent: boolean,
-): Uint8Array {
-  const data = new Uint8Array(width * height * 4);
-  if (!transparent || format === "image/jpeg") {
-    // JPEG has no alpha; opaque PNG flattens onto the default white WMS
-    // background.
-    for (let offset = 0; offset < data.length; offset += 4) {
-      data[offset] = 255;
-      data[offset + 1] = 255;
-      data[offset + 2] = 255;
-      data[offset + 3] = 255;
-    }
-  }
-
-  for (const layer of layers) {
-    const style = LAYER_STYLES[layer.id];
-    const fill = parseHexColor(style.fill);
-    const stroke = parseHexColor(style.stroke);
-    for (const geometry of layer.geometries) {
-      const polygons =
-        geometry.type === "Polygon"
-          ? [geometry.coordinates]
-          : geometry.type === "MultiPolygon"
-            ? geometry.coordinates
-            : [];
-      for (const rings of polygons) {
-        drawFilledPolygon(data, width, height, rings, bbox, fill);
-        // Draw the one-pixel boundary with the layer stroke to retain the
-        // original WMS style while keeping the rasterizer dependency-free.
-        const projectedRings = rings.map((ring) =>
-          ring.map((position) =>
-            projectPosition(position, bbox, width, height),
-          ),
-        );
-        for (const ring of projectedRings) {
-          for (let index = 0; index < ring.length; index += 1) {
-            drawStroke(
-              data,
-              width,
-              height,
-              ring[index],
-              ring[(index + 1) % ring.length],
-              stroke,
-            );
-          }
-        }
-      }
-    }
-  }
-  return data;
-}
-
-function concatBytes(...parts: Uint8Array[]): Uint8Array {
-  const totalLength = parts.reduce((total, part) => total + part.length, 0);
-  const result = new Uint8Array(totalLength);
-  let offset = 0;
-  for (const part of parts) {
-    result.set(part, offset);
-    offset += part.length;
-  }
-  return result;
-}
-
-function crc32(data: Uint8Array): number {
-  let crc = 0xffffffff;
-  for (const byte of data) {
-    crc ^= byte;
-    for (let bit = 0; bit < 8; bit += 1) {
-      crc = (crc >>> 1) ^ (-(crc & 1) & 0xedb88320);
-    }
-  }
-  return (crc ^ 0xffffffff) >>> 0;
-}
-
-function pngChunk(type: string, data: Uint8Array): Uint8Array {
-  const typeBytes = new TextEncoder().encode(type);
-  const chunk = new Uint8Array(12 + data.length);
-  const view = new DataView(chunk.buffer);
-  view.setUint32(0, data.length);
-  chunk.set(typeBytes, 4);
-  chunk.set(data, 8);
-  view.setUint32(
-    8 + data.length,
-    crc32(chunk.subarray(4, 8 + data.length)),
-  );
-  return chunk;
-}
-
-function encodePng(data: Uint8Array, width: number, height: number): Buffer {
-  const scanlines = new Uint8Array((width * 4 + 1) * height);
-  for (let y = 0; y < height; y += 1) {
-    const rowOffset = y * (width * 4 + 1);
-    scanlines[rowOffset] = 0;
-    scanlines.set(
-      data.subarray(y * width * 4, (y + 1) * width * 4),
-      rowOffset + 1,
-    );
-  }
-
-  const header = new Uint8Array(13);
-  const view = new DataView(header.buffer);
-  view.setUint32(0, width);
-  view.setUint32(4, height);
-  header[8] = 8;
-  header[9] = 6;
-  const png = concatBytes(
-    PNG_SIGNATURE,
-    pngChunk("IHDR", header),
-    pngChunk("IDAT", zlibSync(scanlines)),
-    pngChunk("IEND", new Uint8Array()),
-  );
-  return Buffer.from(png);
-}
-
-function encodeRaster(
-  data: Uint8Array,
-  width: number,
-  height: number,
-  format: WmsImageFormat,
-): Buffer {
-  if (format === "image/png") {
-    return encodePng(data, width, height);
-  }
-  return Buffer.from(
-    encodeJpeg({ data, width, height }, 90).data,
-  );
-}
-
-/**
  * Renders a bounded map image. The caller has already validated every
  * protocol parameter; this function re-enforces the dimension limits and
  * then performs exactly one clipped, simplified, row-capped query per
@@ -465,7 +95,7 @@ export async function renderWmsMap(
       (bbox[3] - bbox[1]) / height,
     ) / 2;
 
-  const layerResults: LayerGeometries[] = [];
+  const layerResults: RasterLayer[] = [];
   for (const layerId of request.layers) {
     const definition = findCollection(layerId);
     if (!definition) {

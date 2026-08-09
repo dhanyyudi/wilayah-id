@@ -11,14 +11,13 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
 import { XMLValidator } from "fast-xml-parser";
-import type { MultiPolygon } from "geojson";
+import type { MultiPolygon, Polygon, Position } from "geojson";
 import type { QueryResultRow } from "pg";
 import type { DbQueryFunction } from "../db";
 import { OgcError } from "./errors";
 import {
   WMS_MAX_DIMENSION,
   WMS_MAX_PIXELS,
-  buildMapSvg,
   generateWmsCapabilities,
   queryFeaturesAtPoint,
   renderWmsMap,
@@ -82,6 +81,26 @@ function createSquareDb() {
     }
     return [];
   });
+}
+
+function createGeometryDb(geometry: Polygon | MultiPolygon) {
+  return createFakeDb((text) =>
+    text.includes("ST_AsGeoJSON") ? [{ geometry }] : [],
+  );
+}
+
+function createHighVertexPolygon(): Polygon {
+  const vertexCount = 125_001;
+  const ring: Position[] = [];
+  for (let index = 0; index < vertexCount; index += 1) {
+    const angle = (index / vertexCount) * Math.PI * 2;
+    ring.push([
+      106.5 + Math.cos(angle) * 0.45,
+      -6.5 + Math.sin(angle) * 0.45,
+    ]);
+  }
+  ring.push(ring[0]);
+  return { type: "Polygon", coordinates: [ring] };
 }
 
 async function expectSomeVariation(buffer: Buffer): Promise<void> {
@@ -210,6 +229,26 @@ describe("renderWmsMap SQL", () => {
 });
 
 describe("renderWmsMap raster output", () => {
+  it("renders a valid polygon with more than 125,000 vertices", async () => {
+    const { db } = createGeometryDb(createHighVertexPolygon());
+    const image = await renderWmsMap(
+      {
+        bbox: [106, -7, 107, -6],
+        width: 64,
+        height: 64,
+        layers: ["provinces"],
+        transparent: true,
+        format: "image/png",
+      },
+      db,
+    );
+
+    const metadata = await sharp(image).metadata();
+    expect(metadata.format).toBe("png");
+    expect(metadata.width).toBe(64);
+    expect(metadata.height).toBe(64);
+  });
+
   it("does not import native Sharp in the application renderer", () => {
     const source = readFileSync(
       fileURLToPath(new URL("./wms-renderer.ts", import.meta.url)),
@@ -328,59 +367,6 @@ describe("renderWmsMap raster output", () => {
     expect(metadata.width).toBe(256);
     const stats = await sharp(buffer).stats();
     expect(stats.channels.every((channel) => channel.stdev === 0)).toBe(true);
-  });
-});
-
-describe("buildMapSvg", () => {
-  it("projects geometries into pixel space as closed paths", () => {
-    const svg = buildMapSvg(
-      [{ id: "provinces", geometries: [SQUARE] }],
-      [106, -7, 107, -6],
-      256,
-      128,
-    );
-
-    expect(svg).toContain("<svg");
-    expect(svg).toContain('width="256"');
-    expect(svg).toContain('height="128"');
-    expect(svg).toContain("<path");
-    expect(svg).toContain("M64,96");
-    expect(svg).toContain("Z");
-    expect(svg).toContain('fill-rule="evenodd"');
-  });
-
-  it("draws layers in request order (first layer at the bottom)", () => {
-    const svg = buildMapSvg(
-      [
-        { id: "provinces", geometries: [SQUARE] },
-        { id: "districts", geometries: [SQUARE] },
-      ],
-      [106, -7, 107, -6],
-      256,
-      128,
-    );
-    const provincesFill = svg.indexOf('data-layer="provinces"');
-    const districtsFill = svg.indexOf('data-layer="districts"');
-    expect(provincesFill).toBeGreaterThanOrEqual(0);
-    expect(districtsFill).toBeGreaterThan(provincesFill);
-  });
-
-  it("skips empty and unsupported geometries", () => {
-    const svg = buildMapSvg(
-      [
-        {
-          id: "provinces",
-          geometries: [
-            { type: "Polygon", coordinates: [] },
-            { type: "Point", coordinates: [106.5, -6.5] },
-          ],
-        },
-      ],
-      [106, -7, 107, -6],
-      256,
-      128,
-    );
-    expect(svg).not.toContain("<path");
   });
 });
 
