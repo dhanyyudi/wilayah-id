@@ -99,7 +99,7 @@ jobs:
         env:
           OGC_TEST_DATABASE_URL: >-
             postgresql://postgres:postgres@127.0.0.1:5432/wilayah_id_ogc_test?options=-csearch_path%3Dogc_test,public
-        run: pnpm test tests/ogc
+        run: pnpm test:ogc-integration
 
   build-container:
     if: inputs.skip_container != true

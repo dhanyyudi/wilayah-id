@@ -6,6 +6,8 @@
  * produced image through Sharp, so a passing test proves the bytes are a
  * real, decodable image of the requested dimensions.
  */
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
 import { XMLValidator } from "fast-xml-parser";
@@ -208,6 +210,16 @@ describe("renderWmsMap SQL", () => {
 });
 
 describe("renderWmsMap raster output", () => {
+  it("does not import native Sharp in the application renderer", () => {
+    const source = readFileSync(
+      fileURLToPath(new URL("./wms-renderer.ts", import.meta.url)),
+      "utf8",
+    );
+
+    expect(source).not.toMatch(/from [\"']sharp[\"']/);
+    expect(source).not.toMatch(/require\([\"']sharp[\"']\)/);
+  });
+
   it("renders different nonempty images for two different bounding boxes", async () => {
     const { db } = createSquareDb();
     const base = {
