@@ -92,6 +92,10 @@ function blendPixel(
   data[offset + 3] = Math.round(outputAlpha * 255);
 }
 
+function toPixelIndex(value: number, limit: number): number {
+  return value === limit ? limit - 1 : Math.floor(value);
+}
+
 function drawFilledPolygon(
   data: Uint8Array,
   width: number,
@@ -170,12 +174,12 @@ function drawStroke(
   // DDA visits one candidate per pixel-length step instead of scanning the
   // segment's rectangular bounding area. The bounds check preserves clipping.
   for (let step = 0; step <= steps; step += 1) {
-    const pixelX = Math.floor(x);
-    const pixelY = Math.floor(y);
+    const pixelX = toPixelIndex(x, width);
+    const pixelY = toPixelIndex(y, height);
+    if (metrics) {
+      metrics.strokeCandidatePixels += 1;
+    }
     if (pixelX >= 0 && pixelX < width && pixelY >= 0 && pixelY < height) {
-      if (metrics) {
-        metrics.strokeCandidatePixels += 1;
-      }
       blendPixel(data, (pixelY * width + pixelX) * 4, color, 255);
     }
     x += stepX;
