@@ -40,6 +40,23 @@ class CheckFailure(RuntimeError):
     """A bounded acceptance failure that never includes a secret."""
 
 
+class AuthenticatedResponseRecorder:
+    """Record only cache directives from authenticated HTTP responses."""
+
+    def __init__(self) -> None:
+        self.cache_controls: list[str] = []
+
+    async def record(self, response: httpx.Response) -> None:
+        self.cache_controls.append(response.headers.get("cache-control", ""))
+
+    def require_mcp_private(self, response_start: int) -> None:
+        mcp_cache_controls = self.cache_controls[response_start:]
+        if not mcp_cache_controls:
+            raise CheckFailure("authenticated MCP exchange returned no HTTP response")
+        if any("no-store" not in value.lower() for value in mcp_cache_controls):
+            raise CheckFailure("authenticated MCP exchange omitted Cache-Control no-store")
+
+
 def required_environment(name: str) -> str:
     value = os.environ.get(name, "").strip()
     if not value:
@@ -111,16 +128,19 @@ async def check_edge(base_url: str, api_key: str) -> None:
             require_authentication_error(wrong_key)
         print("PASS wrong key rejected")
 
+    recorder = AuthenticatedResponseRecorder()
     async with httpx.AsyncClient(
         headers={"X-API-Key": api_key},
         timeout=httpx.Timeout(20.0),
         follow_redirects=False,
+        event_hooks={"response": [recorder.record]},
     ) as http_client:
         missing_artifact = await http_client.get(artifact_url)
         require_status(missing_artifact, 404)
         require_no_store(missing_artifact)
         print("PASS authenticated artifact contract")
 
+        mcp_response_start = len(recorder.cache_controls)
         async with streamable_http_client(
             f"{base_url}/mcp",
             http_client=http_client,
@@ -129,6 +149,7 @@ async def check_edge(base_url: str, api_key: str) -> None:
                 await session.initialize()
                 tools = await session.list_tools()
 
+        recorder.require_mcp_private(mcp_response_start)
         require_tools(tool.name for tool in tools.tools)
         print(f"PASS authenticated MCP tools={len(tools.tools)}")
 

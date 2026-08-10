@@ -30,6 +30,10 @@ anonymous and returns `{"status":"ok"}`. `/mcp` and `/artifacts/*` require a
 valid key. All of these responses have a `Cache-Control` value containing
 `no-store`.
 
+The REST API, OGC API Features, WFS, WMS, and vector tiles remain anonymous.
+They do not accept or require `X-API-Key`. Only public MCP and `/artifacts/*`
+require that header, and `GET /health` remains anonymous.
+
 Rotate keys by deploying both the old and new SHA-256 hashes as a comma-
 separated value during the overlap period. Update every client to use the new
 raw key, verify the edge, then deploy again with only the new hash. This
@@ -50,8 +54,8 @@ MCP_API_KEY=... \
 
 The check verifies anonymous health, missing and wrong key rejection,
 authorization before artifact path resolution, authenticated artifact 404s,
-the no-cache contract, and the seven generic plus five compatibility MCP
-tools.
+the no-cache contract for authenticated MCP traffic, and the seven generic
+plus five compatibility MCP tools.
 
 ## Static Compose validation
 

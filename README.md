@@ -371,6 +371,9 @@ while `/mcp` and `/artifacts/*` require a valid key. Every response carries a
 `Cache-Control` value containing `no-store`; clients must not cache health,
 tool, or artifact responses.
 
+The REST API, OGC API Features, WFS, WMS, and vector tiles remain anonymous.
+They do not use `X-API-Key`; only public MCP and `/artifacts/*` are protected.
+
 The public deployment override accepts only `MCP_API_KEYS_SHA256`, never a raw
 key. Keep the raw key in a password manager and the client environment. During
 rotation, deploy two comma-separated SHA-256 hashes for the overlap period,
@@ -388,10 +391,11 @@ MCP_API_KEY=... \
   python scripts/check-mcp-edge.py
 ```
 
-The client checks authentication, no-cache responses, artifact protection, and
-the seven generic plus five compatibility tools without printing its key or
-request headers. See [`docs/MCP_DEPLOYMENT.md`](docs/MCP_DEPLOYMENT.md) for the
-static Compose validation and deployment constraints.
+The client checks authentication, no-cache responses for artifacts and MCP
+traffic, artifact protection, and the seven generic plus five compatibility
+tools without printing its key or request headers. See
+[`docs/MCP_DEPLOYMENT.md`](docs/MCP_DEPLOYMENT.md) for the static Compose
+validation and deployment constraints.
 
 ### Cara menghubungkan di Claude Desktop / Cursor:
 
