@@ -6,10 +6,13 @@ from pathlib import Path
 import unittest
 
 
-PORTS_RESET_PATTERN = r"(?m)^ {4}ports: !reset \[\]\s*$"
-
-
 class DeploymentContractTests(unittest.TestCase):
+    PORTS_RESET_PATTERN = r"(?m)^ {4}ports: !reset \[\]\s*$"
+
+    def assertHasPortsReset(self, text: str) -> None:
+        """Require explicit ports: !reset [] to prevent inherited host ports."""
+        self.assertRegex(text, self.PORTS_RESET_PATTERN)
+
     def test_homeserver_override_fails_closed_without_host_ports(self):
         """Catch removal of edge-secret requirements or host-port exposure."""
         override = (
@@ -28,17 +31,17 @@ class DeploymentContractTests(unittest.TestCase):
         self.assertIn("wilayah-id-mcp-staging.dhanypedia.it.com", override)
         self.assertRegex(override, r"(?m)^  mcp-server:\s*$")
         self.assertNotRegex(override, r"(?m)^  wilayah-id-mcp:\s*$")
-        self.assertRegex(override, PORTS_RESET_PATTERN)
+        self.assertHasPortsReset(override)
 
     def test_override_without_ports_reset_is_rejected(self):
-        """An override without explicit ports reset leaves the inherited host
-        port active and must be rejected."""
+        """A no-reset fixture must fail the assertHasPortsReset helper."""
         fixture = (
             "services:\n  mcp-server:\n    environment:\n"
             '      MCP_API_KEYS_SHA256: ${MCP_API_KEYS_SHA256:?set MCP_API_KEYS_SHA256}\n'
         )
 
-        self.assertNotRegex(fixture, PORTS_RESET_PATTERN)
+        with self.assertRaises(AssertionError):
+            self.assertHasPortsReset(fixture)
 
     def test_acceptance_client_requires_no_store_for_mcp_exchange(self):
         """Catch removal of no-store validation for authenticated MCP traffic."""
