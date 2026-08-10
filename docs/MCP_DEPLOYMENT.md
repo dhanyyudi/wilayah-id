@@ -6,7 +6,7 @@ Run the MCP runtime on the same private Docker network as the read-only
 PostGIS role. The checked-in homeserver override runs Streamable HTTP on the
 container's internal port `8000`; it adds no host port and no `cloudflared`
 service. An existing, externally managed tunnel or authenticated reverse proxy
-forwards only `/mcp` and `/artifacts/*` to that private service. Do not publish
+forwards only `/health`, `/mcp`, and `/artifacts/*` to that private service. Do not publish
 the MCP container port, PostgreSQL, database ports, or raw API keys.
 
 The override fails closed until both required variables are present. Copy

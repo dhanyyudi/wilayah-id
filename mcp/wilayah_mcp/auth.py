@@ -91,7 +91,7 @@ class ApiKeyAuthMiddleware:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
-        if scope["path"] in self.public_paths:
+        if scope["method"] == "GET" and scope["path"] in self.public_paths:
             await self.app(scope, receive, send_with_private_cache_control)
             return
 

@@ -89,7 +89,7 @@ class ApiKeyAuthMiddlewareTests(unittest.TestCase):
 
         self.downstream = downstream
 
-    def run_request(self, path, headers=None):
+    def run_request(self, path, headers=None, method="GET"):
         messages = []
         request_messages = iter([{"type": "http.request", "body": b"", "more_body": False}])
         middleware = ApiKeyAuthMiddleware(self.downstream, self.verifier)
@@ -102,7 +102,12 @@ class ApiKeyAuthMiddlewareTests(unittest.TestCase):
 
         asyncio.run(
             middleware(
-                {"type": "http", "method": "GET", "path": path, "headers": headers or []},
+                {
+                    "type": "http",
+                    "method": method,
+                    "path": path,
+                    "headers": headers or [],
+                },
                 receive,
                 send,
             )
@@ -114,6 +119,43 @@ class ApiKeyAuthMiddlewareTests(unittest.TestCase):
 
         self.assertEqual(self.downstream_calls, ["/health"])
         self.assertEqual(messages[0]["status"], 200)
+
+    def test_non_get_health_requests_require_the_exact_401_contract(self):
+        expected_body = json.dumps(
+            {
+                "error": {
+                    "code": "authentication_required",
+                    "message": "A valid API key is required.",
+                }
+            },
+            separators=(",", ":"),
+        ).encode()
+        expected_headers = [
+            (b"content-type", b"application/json"),
+            (b"cache-control", b"private, no-store"),
+            (b"x-content-type-options", b"nosniff"),
+        ]
+
+        for method in ("POST", "HEAD", "OPTIONS"):
+            with self.subTest(method=method):
+                messages = self.run_request("/health", method=method)
+
+                self.assertEqual(self.downstream_calls, [])
+                self.assertEqual(
+                    messages,
+                    [
+                        {
+                            "type": "http.response.start",
+                            "status": 401,
+                            "headers": expected_headers,
+                        },
+                        {
+                            "type": "http.response.body",
+                            "body": expected_body,
+                            "more_body": False,
+                        },
+                    ],
+                )
 
     def test_public_response_cache_control_is_private(self):
         messages = self.run_request("/health")
