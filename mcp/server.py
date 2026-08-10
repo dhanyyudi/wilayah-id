@@ -19,6 +19,7 @@ from starlette.responses import FileResponse, JSONResponse
 from wilayah_mcp.artifacts import ArtifactStore
 from wilayah_mcp.errors import SpatialServiceError
 from wilayah_mcp.generic_service import SpatialInteroperabilityService
+from wilayah_mcp.http_runtime import run_configured_transport
 from wilayah_mcp.models import (
     AreaOfInterest,
     ErrorDetail,
@@ -454,6 +455,18 @@ def extract_spatial_subset(
 
 
 @mcp.custom_route(
+    "/health",
+    methods=["GET"],
+    include_in_schema=False,
+)
+async def health(_request: Request):
+    return JSONResponse(
+        {"status": "ok"},
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@mcp.custom_route(
     "/artifacts/{artifact_id}/{filename}",
     methods=["GET"],
     name="download-spatial-artifact",
@@ -510,4 +523,5 @@ Important context:
 
 
 if __name__ == "__main__":
-    mcp.run(transport=_transport())
+    transport = _transport()
+    run_configured_transport(mcp, transport)
