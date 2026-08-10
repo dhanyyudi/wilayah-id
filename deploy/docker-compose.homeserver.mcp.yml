@@ -4,10 +4,13 @@ services:
       MCP_TRANSPORT: streamable-http
       MCP_HOST: 0.0.0.0
       MCP_PORT: 8000
+      MCP_API_KEYS_SHA256: ${MCP_API_KEYS_SHA256:?set MCP_API_KEYS_SHA256}
+      MCP_PUBLIC_BASE_URL: ${MCP_PUBLIC_BASE_URL:?set MCP_PUBLIC_BASE_URL}
       MCP_ALLOWED_HOSTS: >-
         127.0.0.1:*,
         localhost:*,
         wilayah-id-mcp:*,
+        wilayah-id-mcp-staging.dhanypedia.it.com,
         wilayah-id-mcp.dhanypedia.it.com
       MCP_ARTIFACT_DIR: /tmp/wilayah-mcp-artifacts
       MCP_ARTIFACT_TTL_SECONDS: 900

@@ -1,89 +1,72 @@
 # MCP deployment
 
-## Recommended topology
+## Authenticated edge architecture
 
 Run the MCP runtime on the same private Docker network as the read-only
-PostGIS role. Publish only the Streamable HTTP endpoint through a Cloudflare
-Tunnel (or an equivalent authenticated reverse proxy). Do not publish
-PostgreSQL or the container port directly.
+PostGIS role. The checked-in homeserver override runs Streamable HTTP on the
+container's internal port `8000`; it adds no host port and no `cloudflared`
+service. An existing, externally managed tunnel or authenticated reverse proxy
+forwards only `/mcp` and `/artifacts/*` to that private service. Do not publish
+the MCP container port, PostgreSQL, database ports, or raw API keys.
 
-A typical server-side layout consists of:
+The override fails closed until both required variables are present. Copy
+`deploy/.env.example` to the deployment environment and replace only the hash
+placeholder and public HTTPS origin:
 
-- an application source checkout of this repository;
-- a runtime Compose project directory that holds the deployment overrides;
-- the MCP build context at `mcp/` inside the source checkout;
-- a shared private Docker network between the MCP container and PostGIS.
+```dotenv
+MCP_API_KEYS_SHA256=<64-character-sha256-hex>
+MCP_PUBLIC_BASE_URL=https://wilayah-id-mcp-staging.dhanypedia.it.com
+```
 
-The checked-in override `deploy/docker-compose.homeserver.mcp.yml` converts
-the `wilayah-id-mcp` service from an idle stdio process to Streamable HTTP on
-internal port `8000`. The port is not published on the host. Spatial subset
-artifacts are ephemeral files under `/tmp/wilayah-mcp-artifacts` in the
-container and expire after 15 minutes by default.
+`MCP_API_KEYS_SHA256` contains one or more comma-separated SHA-256 hashes. The
+raw key belongs only in a password manager and in the client environment. It
+must never be committed, added to this example file, logged, or copied into an
+edge configuration.
 
-## Deploying an update
+## Client authentication and rotation
 
-From the application source checkout on the server, after the desired commit
-is on `main`:
+Clients send the raw key only in the `X-API-Key` header. `/health` is
+anonymous and returns `{"status":"ok"}`. `/mcp` and `/artifacts/*` require a
+valid key. All of these responses have a `Cache-Control` value containing
+`no-store`.
+
+Rotate keys by deploying both the old and new SHA-256 hashes as a comma-
+separated value during the overlap period. Update every client to use the new
+raw key, verify the edge, then deploy again with only the new hash. This
+preserves access during client rollout without ever publishing either raw key.
+
+## Public acceptance check
+
+Run this only from a trusted client environment after the existing edge route
+has been configured. It reads its URL and raw key exclusively from environment
+variables, does not print request headers or the key, and exits nonzero on any
+contract mismatch:
 
 ```bash
-git status --short
-git pull --ff-only origin main
-
-# Copy the checked-in override into the runtime Compose project, then:
-docker compose \
-  -f docker-compose.yml \
-  -f docker-compose.mcp.yml \
-  up -d --build --no-deps wilayah-id-mcp
-docker compose \
-  -f docker-compose.yml \
-  -f docker-compose.mcp.yml \
-  ps wilayah-id-mcp
-docker logs --tail 50 wilayah-id-mcp
+MCP_BASE_URL=https://public-mcp.example.invalid \
+MCP_API_KEY=... \
+  python scripts/check-mcp-edge.py
 ```
 
-If `git status --short` is not empty, preserve or commit the server-side
-change before pulling. Never reset an unknown server-side modification.
+The check verifies anonymous health, missing and wrong key rejection,
+authorization before artifact path resolution, authenticated artifact 404s,
+the no-cache contract, and the seven generic plus five compatibility MCP
+tools.
 
-The MCP endpoint within the private Docker network is:
+## Static Compose validation
 
-```text
-http://wilayah-id-mcp:8000/mcp
-```
-
-Artifact URLs returned by `extract_spatial_subset` use the same HTTP origin:
-
-```text
-http://wilayah-id-mcp:8000/artifacts/{artifact_id}/{filename}
-```
-
-Set `MCP_PUBLIC_BASE_URL` to the externally reachable origin only after the
-public exposure gate below is complete. If it is unset, tool responses provide
-`relative_url` and leave `download_url` empty. A production reverse proxy or
-Tunnel route must forward both `/mcp` and `/artifacts/*` to the same service.
-
-Direct execution still defaults to stdio:
+Validate the override without starting or building a container:
 
 ```bash
-cd mcp
-python server.py
+MCP_API_KEYS_SHA256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+MCP_PUBLIC_BASE_URL=https://wilayah-id-mcp-staging.dhanypedia.it.com \
+  docker compose \
+    -f docker-compose.yml \
+    -f deploy/docker-compose.homeserver.mcp.yml \
+    config --quiet
 ```
 
-## Public exposure gate
-
-Before creating public DNS or a Cloudflare Tunnel route:
-
-1. map the hostname only to `http://wilayah-id-mcp:8000`, including `/mcp` and
-   `/artifacts/*`;
-2. apply Cloudflare Access or equivalent token-based authentication;
-3. add rate limits and request-size limits;
-4. retain the read-only database role and statement timeout;
-5. validate the public URL with MCP Inspector and a real client;
-6. monitor error rate, latency, and unusual tool-call volume;
-7. configure `MCP_PUBLIC_BASE_URL` with the authenticated HTTPS origin and
-   verify that expired and path-traversal artifact requests return 404.
-
-The older `/sse` URL is a legacy transport and is not the default for this
-deployment.
-
-For a deliberately anonymous research demo, use an isolated hostname and
-dataset, strict rate limits, and no sensitive or write-capable tools.
+Inspect the rendered configuration as part of the same review and confirm that
+the homeserver override has not introduced published port `8000` or a PostGIS
+port. Do not run `up`, `build`, Podman, or any Cloudflare management command as
+part of this validation.

@@ -364,6 +364,35 @@ Docker Compose lokal menjalankan Streamable HTTP pada
 tersedia melalui `MCP_TRANSPORT`, `MCP_HOST`, `MCP_PORT`,
 `MCP_ALLOWED_HOSTS`, dan `MCP_ALLOWED_ORIGINS`.
 
+### Public MCP authentication
+
+Public MCP uses the `X-API-Key` request header. `/health` remains anonymous,
+while `/mcp` and `/artifacts/*` require a valid key. Every response carries a
+`Cache-Control` value containing `no-store`; clients must not cache health,
+tool, or artifact responses.
+
+The public deployment override accepts only `MCP_API_KEYS_SHA256`, never a raw
+key. Keep the raw key in a password manager and the client environment. During
+rotation, deploy two comma-separated SHA-256 hashes for the overlap period,
+move clients to the new raw key, then remove the old hash. Never commit raw
+keys or publish database ports.
+
+The MCP service remains private behind an existing managed tunnel or
+authenticated reverse proxy. It does not include a `cloudflared` container or
+publish port `8000` through the homeserver override. Validate an activated edge
+from a trusted client with:
+
+```bash
+MCP_BASE_URL=https://public-mcp.example.invalid \
+MCP_API_KEY=... \
+  python scripts/check-mcp-edge.py
+```
+
+The client checks authentication, no-cache responses, artifact protection, and
+the seven generic plus five compatibility tools without printing its key or
+request headers. See [`docs/MCP_DEPLOYMENT.md`](docs/MCP_DEPLOYMENT.md) for the
+static Compose validation and deployment constraints.
+
 ### Cara menghubungkan di Claude Desktop / Cursor:
 
 Gunakan URL Streamable HTTP yang sesuai dengan lingkungan klien. Untuk
