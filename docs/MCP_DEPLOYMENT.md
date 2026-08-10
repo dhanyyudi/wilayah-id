@@ -4,7 +4,8 @@
 
 Run the MCP runtime on the same private Docker network as the read-only
 PostGIS role. The checked-in homeserver override runs Streamable HTTP on the
-container's internal port `8000`; it adds no host port and no `cloudflared`
+container's internal port `8000`; it resets the loopback port inherited from
+the local Compose file with `ports: !reset []` and adds no `cloudflared`
 service. An existing, externally managed tunnel or authenticated reverse proxy
 forwards only `/health`, `/mcp`, and `/artifacts/*` to that private service. Do not publish
 the MCP container port, PostgreSQL, database ports, or raw API keys.
@@ -71,6 +72,7 @@ MCP_PUBLIC_BASE_URL=https://wilayah-id-mcp-staging.dhanypedia.it.com \
 ```
 
 Inspect the rendered configuration as part of the same review and confirm that
-the homeserver override has not introduced published port `8000` or a PostGIS
-port. Do not run `up`, `build`, Podman, or any Cloudflare management command as
-part of this validation.
+the homeserver override resets the inherited loopback port with explicit
+`ports: !reset []`. No published port `8000` or PostGIS port should appear in
+the merged output. Do not run `up`, `build`, or any Cloudflare management
+command as part of this validation.

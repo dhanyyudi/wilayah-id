@@ -381,8 +381,9 @@ move clients to the new raw key, then remove the old hash. Never commit raw
 keys or publish database ports.
 
 The MCP service remains private behind an existing managed tunnel or
-authenticated reverse proxy. It does not include a `cloudflared` container or
-publish port `8000` through the homeserver override. Validate an activated edge
+authenticated reverse proxy. The homeserver override resets the loopback port
+inherited from the local Compose file with `ports: !reset []` and does not
+include a `cloudflared` container. Validate an activated edge
 from a trusted client with:
 
 ```bash
