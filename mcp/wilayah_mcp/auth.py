@@ -20,6 +20,14 @@ class ApiKeyVerifier:
     @classmethod
     def from_encoded_hashes(cls, raw: str) -> "ApiKeyVerifier":
         values = [value.strip() for value in raw.split(",") if value.strip()]
+        if any(
+            len(value) != 64
+            or any(character not in "0123456789abcdefABCDEF" for character in value)
+            for value in values
+        ):
+            raise ApiKeyConfigurationError(
+                "API-key hashes must be hexadecimal SHA-256 digests."
+            )
         try:
             digests = tuple(bytes.fromhex(value) for value in values)
         except ValueError as exc:
@@ -68,8 +76,23 @@ class ApiKeyAuthMiddleware:
         self.public_paths = public_paths
 
     async def __call__(self, scope, receive, send) -> None:
-        if scope["type"] != "http" or scope["path"] in self.public_paths:
+        async def send_with_private_cache_control(message) -> None:
+            if message.get("type") != "http.response.start":
+                await send(message)
+                return
+            headers = [
+                (name, value)
+                for name, value in message.get("headers", [])
+                if name.lower() != b"cache-control"
+            ]
+            headers.append((b"cache-control", b"private, no-store"))
+            await send({**message, "headers": headers})
+
+        if scope["type"] != "http":
             await self.app(scope, receive, send)
+            return
+        if scope["path"] in self.public_paths:
+            await self.app(scope, receive, send_with_private_cache_control)
             return
 
         candidate = extract_single_api_key(scope.get("headers", []))
@@ -96,17 +119,5 @@ class ApiKeyAuthMiddleware:
             )
             await send({"type": "http.response.body", "body": body, "more_body": False})
             return
-
-        async def send_with_private_cache_control(message) -> None:
-            if message.get("type") != "http.response.start":
-                await send(message)
-                return
-            headers = [
-                (name, value)
-                for name, value in message.get("headers", [])
-                if name.lower() != b"cache-control"
-            ]
-            headers.append((b"cache-control", b"private, no-store"))
-            await send({**message, "headers": headers})
 
         await self.app(scope, receive, send_with_private_cache_control)

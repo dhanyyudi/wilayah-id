@@ -42,6 +42,8 @@ class ApiKeyVerifierTests(unittest.TestCase):
             ApiKeyVerifier.from_encoded_hashes("not-a-digest")
         with self.assertRaises(ApiKeyConfigurationError):
             ApiKeyVerifier.from_encoded_hashes("a" * 64 + "00")
+        with self.assertRaises(ApiKeyConfigurationError):
+            ApiKeyVerifier.from_encoded_hashes("a" * 32 + " " + "a" * 32)
 
     def test_header_parser_rejects_missing_empty_duplicate_and_oversized_values(self):
         self.assertIsNone(extract_single_api_key([]))
@@ -112,6 +114,13 @@ class ApiKeyAuthMiddlewareTests(unittest.TestCase):
 
         self.assertEqual(self.downstream_calls, ["/health"])
         self.assertEqual(messages[0]["status"], 200)
+
+    def test_public_response_cache_control_is_private(self):
+        messages = self.run_request("/health")
+
+        self.assertEqual(
+            dict(messages[0]["headers"])[b"cache-control"], b"private, no-store"
+        )
 
     def test_missing_wrong_empty_duplicate_non_ascii_and_oversized_keys_return_401(self):
         headers_by_case = [
