@@ -1,4 +1,8 @@
 services:
+  app:
+    environment:
+      WILAYAH_RUNTIME_ROLE: origin
+
   mcp-server:
     ports: !reset []
     environment:

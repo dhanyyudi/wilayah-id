@@ -3,6 +3,24 @@ const DEFAULT_TILES_ORIGIN = "https://tiles.dhanypedia.it.com";
 
 type PublicEnvironment = Record<string, string | undefined>;
 
+export type RuntimeRole = "proxy" | "origin";
+
+export function getRuntimeRole(
+  env: PublicEnvironment = process.env,
+): RuntimeRole {
+  const role = env.WILAYAH_RUNTIME_ROLE;
+
+  if (role === undefined) {
+    return "proxy";
+  }
+
+  if (role === "proxy" || role === "origin") {
+    return role;
+  }
+
+  throw new TypeError("Invalid WILAYAH_RUNTIME_ROLE configuration");
+}
+
 function parsePublicUrl(
   variable: string,
   value: string,

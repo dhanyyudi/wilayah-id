@@ -1,5 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { getAbsolutePublicUrl, getPublicOrigins } from "./public-config";
+import {
+  getAbsolutePublicUrl,
+  getPublicOrigins,
+  getRuntimeRole,
+} from "./public-config";
+
+describe("getRuntimeRole", () => {
+  it("defaults to the proxy role when the runtime role is omitted", () => {
+    expect(getRuntimeRole({})).toBe("proxy");
+  });
+
+  it("accepts the explicit origin role", () => {
+    expect(getRuntimeRole({ WILAYAH_RUNTIME_ROLE: "origin" })).toBe("origin");
+  });
+
+  it.each(["", "direct", "ORIGIN"]) (
+    "fails closed for the invalid explicit role %j",
+    (role) => {
+      expect(() => getRuntimeRole({ WILAYAH_RUNTIME_ROLE: role })).toThrow(
+        "Invalid WILAYAH_RUNTIME_ROLE configuration",
+      );
+    },
+  );
+});
 
 describe("getPublicOrigins", () => {
   it("returns the public service defaults", () => {

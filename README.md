@@ -253,21 +253,21 @@ BASE_URL=http://127.0.0.1:3000 bash scripts/smoke-public-geospatial.sh
 
 Perhatian saat menjalankan smoke terhadap server lokal: middleware me-rewrite
 setiap permintaan `/api/*` ke `WILAYAH_API_ORIGIN` yang default-nya menunjuk
-ke origin API produksi, sehingga smoke bisa diam-diam menguji produksi dan
-melaporkan hasil hijau palsu. Untuk target lokal, jalankan server dengan
-origin yang menunjuk ke dirinya sendiri (origin HTTP/non-HTTPS ditolak pada
-`NODE_ENV=production`, jadi gunakan `pnpm dev`):
+ke origin API publik, sehingga smoke bisa diam-diam menguji layanan eksternal
+dan melaporkan hasil hijau palsu. Untuk server yang menangani rute API secara
+lokal, atur `WILAYAH_RUNTIME_ROLE=origin`. Nilai yang diizinkan hanya `proxy`
+(default) dan `origin`; nilai eksplisit lain, termasuk nilai kosong, gagal
+dengan kesalahan konfigurasi. Runtime role hanya dibaca dari environment proses,
+bukan dari header request. Origin mode menjalankan `/api/*` secara lokal dan
+tetap me-rewrite `/tiles/*` ke `WILAYAH_TILES_ORIGIN`:
 
 ```bash
-WILAYAH_API_ORIGIN=http://127.0.0.1:3000 \
-WILAYAH_TILES_ORIGIN=http://127.0.0.1:3000 \
-NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000 \
-DATABASE_URL=... pnpm dev -p 3000
+WILAYAH_RUNTIME_ROLE=origin DATABASE_URL=... pnpm start
 ```
 
-Tanda bahwa request di-rewrite ke produksi: header respons memuat
-`x-middleware-rewrite: https://wilayah-id-api...` dan `server: openresty`.
-Override tidak diperlukan bila `BASE_URL` menunjuk ke deployment sungguhan.
+`/api/health` tetap ditangani secara lokal dan tidak bergantung pada peran
+runtime. Cloudflare Worker dan Vercel tidak menetapkan variabel ini dan tetap
+menggunakan peran `proxy`.
 
 ### Response Format
 

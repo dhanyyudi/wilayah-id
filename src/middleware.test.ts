@@ -7,6 +7,7 @@ describe("middleware", () => {
     vi.stubEnv("WILAYAH_API_ORIGIN", "https://api.example.test");
     vi.stubEnv("WILAYAH_TILES_ORIGIN", "https://tiles.example.test");
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://site.example.test");
+    vi.stubEnv("WILAYAH_RUNTIME_ROLE", "proxy");
   });
 
   afterEach(() => {
@@ -25,7 +26,32 @@ describe("middleware", () => {
     );
   });
 
-  it("rewrites tile requests without the public tiles prefix", () => {
+  it("forwards API requests to local route handlers in origin mode", () => {
+    vi.stubEnv("WILAYAH_RUNTIME_ROLE", "origin");
+
+    const response = middleware(
+      new NextRequest("https://site.example.test/api/v1/regions/provinces"),
+    );
+
+    expect(response.headers.get("x-middleware-next")).toBe("1");
+    expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+  });
+
+  it("does not allow a request header to activate origin mode", () => {
+    const response = middleware(
+      new NextRequest("https://site.example.test/api/v1/regions/provinces", {
+        headers: { "WILAYAH_RUNTIME_ROLE": "origin" },
+      }),
+    );
+
+    expect(response.headers.get("x-middleware-rewrite")).toBe(
+      "https://api.example.test/api/v1/regions/provinces",
+    );
+  });
+
+  it("rewrites tile requests without the public tiles prefix in origin mode", () => {
+    vi.stubEnv("WILAYAH_RUNTIME_ROLE", "origin");
+
     const request = new NextRequest(
       "https://site.example.test/tiles/provinsi/3/6/4.pbf",
     );
@@ -54,12 +80,17 @@ describe("middleware", () => {
     expect(response.headers.get("x-middleware-rewrite")).toBe(destination);
   });
 
-  it("keeps the exact health route local", () => {
-    const response = middleware(
-      new NextRequest("https://site.example.test/api/health?probe=readiness"),
-    );
+  it.each(["proxy", "origin"])(
+    "keeps the exact health route local in %s mode",
+    (role) => {
+      vi.stubEnv("WILAYAH_RUNTIME_ROLE", role);
 
-    expect(response.headers.get("x-middleware-next")).toBe("1");
-    expect(response.headers.get("x-middleware-rewrite")).toBeNull();
-  });
+      const response = middleware(
+        new NextRequest("https://site.example.test/api/health?probe=readiness"),
+      );
+
+      expect(response.headers.get("x-middleware-next")).toBe("1");
+      expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+    },
+  );
 });
