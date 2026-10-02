@@ -28,7 +28,7 @@ class DeploymentContractTests(unittest.TestCase):
             "MCP_PUBLIC_BASE_URL: ${MCP_PUBLIC_BASE_URL:?set MCP_PUBLIC_BASE_URL}",
             override,
         )
-        self.assertIn("wilayah-id-mcp-staging.dhanypedia.it.com", override)
+        self.assertIn("wilayah-id-mcp-staging.dhanypedia.com", override)
         self.assertRegex(override, r"(?m)^  mcp-server:\s*$")
         self.assertNotRegex(override, r"(?m)^  wilayah-id-mcp:\s*$")
         self.assertHasPortsReset(override)

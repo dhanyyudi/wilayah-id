@@ -15,8 +15,8 @@ services:
         127.0.0.1:*,
         localhost:*,
         wilayah-id-mcp:*,
-        wilayah-id-mcp-staging.dhanypedia.it.com,
-        wilayah-id-mcp.dhanypedia.it.com
+        wilayah-id-mcp-staging.dhanypedia.com,
+        wilayah-id-mcp.dhanypedia.com
       MCP_ARTIFACT_DIR: /tmp/wilayah-mcp-artifacts
       MCP_ARTIFACT_TTL_SECONDS: 900
       MCP_MAX_GEOMETRY_POINTS: 50000
