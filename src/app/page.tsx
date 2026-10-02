@@ -579,9 +579,9 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 p-5 rounded-2xl text-left shadow-inner max-w-2xl mx-auto">
             <AlertTriangle className="w-8 h-8 shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <h4 className="font-semibold text-base">Vercel Free Tier</h4>
+              <h4 className="font-semibold text-base">Instance Demo</h4>
               <p className="text-sm leading-relaxed opacity-90">
-                Website ini di-host di Vercel free tier dan hanya berfungsi sebagai demo testing API. Untuk production use, sangat disarankan untuk melakukan self-host.
+                Website ini berjalan di Cloudflare Workers dengan origin homeserver dan hanya berfungsi sebagai demo testing API. Untuk production use, sangat disarankan untuk melakukan self-host.
               </p>
             </div>
           </div>

@@ -5,7 +5,7 @@ import { neon } from "@neondatabase/serverless";
  * Database connection factory — dual-mode.
  *
  * - Self-hosted PostGIS: uses standard `pg` Pool (TCP, persistent connections)
- * - Neon (Vercel): uses @neondatabase/serverless (HTTP, edge-compatible)
+ * - Neon: uses @neondatabase/serverless (HTTP, edge-compatible)
  *
  * Detection: if DATABASE_URL contains "neon.tech", uses Neon driver.
  * Otherwise, uses standard pg Pool.
@@ -59,7 +59,7 @@ export function getDb(): DbQueryFunction {
   }
 
   if (isNeonUrl(databaseUrl)) {
-    // Neon serverless driver (HTTP) — for Vercel Edge/Serverless
+    // Neon serverless driver (HTTP) — for edge/serverless runtimes
     const neonSql = neon(databaseUrl);
 
     // Wrap to add .query() method

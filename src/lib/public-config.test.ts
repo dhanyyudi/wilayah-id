@@ -30,7 +30,7 @@ describe("getPublicOrigins", () => {
 
     expect(origins.api.href).toBe("https://wilayah-id-api.dhanypedia.com/");
     expect(origins.tiles.href).toBe("https://tiles.dhanypedia.com/");
-    expect(origins.site.href).toBe("https://wilayah-id-restapi.vercel.app/");
+    expect(origins.site.href).toBe("https://wilayah-id-api.dhanypedia.com/");
   });
 
   it("uses environment overrides", () => {
