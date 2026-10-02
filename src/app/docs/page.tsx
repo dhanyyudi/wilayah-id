@@ -165,6 +165,7 @@ export default function DocsPage() {
           </div>
           <div className="flex items-center gap-1">
             <Link href="/"><Button variant="ghost" size="sm" className="text-xs h-8">← Peta</Button></Link>
+            <Link href="/keys"><Button variant="ghost" size="sm" className="text-xs h-8">API Key</Button></Link>
             <a href="https://github.com/dhanyyudi/wilayah-id" target="_blank" rel="noopener noreferrer">
               <Button variant="ghost" size="icon" className="h-8 w-8"><Github className="h-4 w-4" /></Button>
             </a>
@@ -264,6 +265,7 @@ export default function DocsPage() {
               <h4 className="font-semibold text-sm">Resources</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link href="/docs" className="hover:text-foreground transition-colors">API Documentation</Link></li>
+                <li><Link href="/keys" className="hover:text-foreground transition-colors">API Key &amp; Rate Limit</Link></li>
                 <li><Link href="/self-host" className="hover:text-foreground transition-colors">Self-Hosting Guide</Link></li>
                 <li><a href="https://github.com/dhanyyudi/wilayah-id" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">GitHub Repository</a></li>
               </ul>

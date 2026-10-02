@@ -285,6 +285,44 @@ WILAYAH_RUNTIME_ROLE=origin DATABASE_URL=... pnpm start
 runtime. Cloudflare Worker tidak menetapkan variabel ini dan tetap menggunakan
 peran `proxy`.
 
+### API key dan rate limit
+
+API bisa dipakai tanpa key dengan batas per alamat IP. API key gratis dibuat di
+halaman `/keys` (tanpa akun) dan menaikkan batasnya. Kirim key di header
+`X-API-Key`, atau di parameter `api_key` untuk klien GIS yang tidak bisa
+mengatur header.
+
+| Akses | Umum | Endpoint berat | Harian |
+|-------|------|----------------|--------|
+| Tanpa key (per alamat IP) | 60/menit | 10/menit | tidak ada |
+| API key gratis | 300/menit | 60/menit | 20.000/hari |
+| Key pemilik | 3.000/menit | 3.000/menit | tidak ada |
+
+Endpoint berat: WMS `GetMap`, WFS `GetFeature`, OGC API Features `items`, dan
+batas wilayah dengan `geometry=true`. Vector tiles dan `/api/health` tidak
+dibatasi. Respons menyertakan `RateLimit-Limit`, `RateLimit-Remaining`, dan
+`RateLimit-Reset`; bila batas terlampaui server menjawab HTTP 429 dengan
+`Retry-After`. Key yang tidak valid dijawab HTTP 401, tidak diturunkan menjadi
+akses anonim.
+
+```bash
+curl -H "X-API-Key: $WILAYAH_API_KEY" \
+  "https://wilayah-id-api.dhanypedia.com/api/v1/regions/provinces"
+```
+
+Key gratis bersifat stateless: server menandatanganinya dengan
+`WILAYAH_KEY_SIGNING_SECRET` dan tidak menyimpannya, sehingga key hanya
+ditampilkan sekali dan berlaku 365 hari. Pembatasan hanya aktif pada peran
+`origin` dengan `WILAYAH_RATE_LIMIT_ENABLED=true`; hitungan disimpan di memori
+proses dan kembali nol saat server restart. Konfigurasi, key pemilik,
+pencabutan key, dan token proxy dijelaskan di
+[`docs/MCP_DEPLOYMENT.md`](docs/MCP_DEPLOYMENT.md).
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/keys` | Kebijakan batas yang sedang berlaku |
+| POST | `/api/keys` | Buat API key gratis (`label`, `contact` opsional) |
+
 ### Response Format
 
 ```json
@@ -387,8 +425,12 @@ while `/mcp` and `/artifacts/*` require a valid key. Every response carries a
 `Cache-Control` value containing `no-store`; clients must not cache health,
 tool, or artifact responses.
 
-The REST API, OGC API Features, WFS, WMS, and vector tiles remain anonymous.
-They do not use `X-API-Key`; only public MCP and `/artifacts/*` are protected.
+The REST API, OGC API Features, WFS, WMS, and vector tiles remain usable
+without a key; only public MCP and `/artifacts/*` require one. MCP accepts the
+owner keys listed in `MCP_API_KEYS_SHA256` and, when
+`WILAYAH_KEY_SIGNING_SECRET` is set, the free keys created on the `/keys`
+page. An issued key gets 120 MCP requests and 10 artifact downloads per
+minute; owner keys only meet a 3,000 per minute safety cap.
 
 The public deployment override accepts only `MCP_API_KEYS_SHA256`, never a raw
 key. Keep the raw key in a password manager and the client environment. During
