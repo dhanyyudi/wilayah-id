@@ -31,9 +31,55 @@ anonymous and returns `{"status":"ok"}`. `/mcp` and `/artifacts/*` require a
 valid key. All of these responses have a `Cache-Control` value containing
 `no-store`.
 
-The REST API, OGC API Features, WFS, WMS, and vector tiles remain anonymous.
-They do not accept or require `X-API-Key`. Only public MCP and `/artifacts/*`
-require that header, and `GET /health` remains anonymous.
+The REST API, OGC API Features, WFS, WMS, and vector tiles remain usable
+without a key. Only public MCP and `/artifacts/*` require `X-API-Key`, and
+`GET /health` remains anonymous.
+
+## Key tiers and rate limits
+
+Two kinds of key are accepted:
+
+- **Owner keys** are the raw keys whose SHA-256 hashes are listed in
+  `MCP_API_KEYS_SHA256` (MCP) and `WILAYAH_OWNER_KEYS_SHA256` (REST and OGC).
+  They skip the public limits and only meet a safety cap of 3,000 requests
+  per minute. Use one key per application so a leaked key can be removed
+  without affecting the others, and keep them out of browser code.
+- **Issued keys** are created by visitors on the `/keys` page. They are
+  stateless: the server signs them with `WILAYAH_KEY_SIGNING_SECRET` and does
+  not store them. They are accepted only when that secret is configured, and
+  they never grant the owner tier.
+
+Default limits per minute:
+
+| Caller | REST and OGC | Heavy REST and OGC | MCP requests | Artifact downloads |
+|--------|--------------|--------------------|--------------|--------------------|
+| No key (per address) | 60 | 10 | not allowed | not allowed |
+| Issued key | 300, and 20,000 per day | 60 | 120 | 10 |
+| Owner key | 3,000 | 3,000 | 3,000 | 3,000 |
+
+Heavy requests are WMS `GetMap`, WFS `GetFeature`, OGC API Features items, and
+boundary requests with `geometry=true`. A caller over its limit receives HTTP
+429 with `Retry-After`. Counters live in the memory of each container and
+reset when it restarts. REST and OGC enforcement is off unless
+`WILAYAH_RATE_LIMIT_ENABLED=true`; MCP limits are always applied.
+
+An issued key cannot be listed or edited after creation. To refuse one, add
+its id to `WILAYAH_REVOKED_KEY_IDS` and recreate both services; the id is
+written to the API log when the key is created. Rotating
+`WILAYAH_KEY_SIGNING_SECRET` invalidates every issued key at once.
+
+The web Worker proxies `/api/*` to this origin, so the origin would otherwise
+see one shared Cloudflare address for every map visitor. Set the same
+`WILAYAH_PROXY_TOKEN` on the origin and as a Worker secret; the Worker then
+forwards the visitor address and the origin trusts it only with that token:
+
+```bash
+pnpm exec wrangler secret put WILAYAH_PROXY_TOKEN
+```
+
+The limits can be tuned with `WILAYAH_LIMIT_*` (see `.env.example`) and, for
+MCP, `MCP_LIMIT_KEY_PER_MINUTE`, `MCP_LIMIT_KEY_ARTIFACTS_PER_MINUTE`, and
+`MCP_LIMIT_OWNER_PER_MINUTE`.
 
 Rotate keys by deploying both the old and new SHA-256 hashes as a comma-
 separated value during the overlap period. Update every client to use the new

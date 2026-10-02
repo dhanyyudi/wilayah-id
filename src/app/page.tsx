@@ -626,6 +626,7 @@ export default function HomePage() {
               <h4 className="font-semibold text-sm">Resources</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link href="/docs" className="hover:text-foreground transition-colors">API Documentation</Link></li>
+                <li><Link href="/keys" className="hover:text-foreground transition-colors">API Key &amp; Rate Limit</Link></li>
                 <li><Link href="/ogc" className="hover:text-foreground transition-colors">GIS Services (WMS/WFS)</Link></li>
                 <li><Link href="/self-host" className="hover:text-foreground transition-colors">Self-Hosting Guide</Link></li>
                 <li><a href="https://github.com/dhanyyudi/wilayah-id" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">GitHub Repository</a></li>

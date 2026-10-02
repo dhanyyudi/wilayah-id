@@ -3,8 +3,12 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import math
+import time
 from collections.abc import Awaitable, Callable, Iterable
 from typing import Any
+
+from wilayah_mcp.access import FixedWindowLimiter, McpLimits, SignedKeyVerifier
 
 
 class ApiKeyConfigurationError(ValueError):
@@ -70,10 +74,37 @@ class ApiKeyAuthMiddleware:
         ],
         verifier: ApiKeyVerifier,
         public_paths: frozenset[str] = frozenset({"/health"}),
+        signed_verifier: SignedKeyVerifier | None = None,
+        limiter: FixedWindowLimiter | None = None,
+        limits: McpLimits | None = None,
+        clock: Callable[[], float] = time.time,
     ) -> None:
         self.app = app
         self.verifier = verifier
         self.public_paths = public_paths
+        self.signed_verifier = signed_verifier
+        self.limiter = limiter
+        self.limits = limits or McpLimits()
+        self.clock = clock
+
+    def _identify(self, candidate: str, now: float) -> tuple[str, str] | None:
+        """Return ``(tier, identity)``; hash-configured keys are the owner tier."""
+
+        if self.verifier.accepts(candidate):
+            digest = hashlib.sha256(candidate.encode("utf-8")).hexdigest()
+            return "owner", f"owner:{digest[:16]}"
+        if self.signed_verifier is not None:
+            key_id = self.signed_verifier.verify(candidate, now)
+            if key_id is not None:
+                return "free", f"key:{key_id}"
+        return None
+
+    def _budget(self, tier: str, identity: str, path: str) -> tuple[str, int]:
+        if tier == "owner":
+            return identity, self.limits.owner_per_minute
+        if path.startswith("/artifacts/"):
+            return f"{identity}:artifacts", self.limits.key_artifacts_per_minute
+        return identity, self.limits.key_per_minute
 
     async def __call__(self, scope, receive, send) -> None:
         async def send_with_private_cache_control(message) -> None:
@@ -95,8 +126,10 @@ class ApiKeyAuthMiddleware:
             await self.app(scope, receive, send_with_private_cache_control)
             return
 
+        now = self.clock()
         candidate = extract_single_api_key(scope.get("headers", []))
-        if candidate is None or not self.verifier.accepts(candidate):
+        caller = None if candidate is None else self._identify(candidate, now)
+        if caller is None:
             body = json.dumps(
                 {
                     "error": {
@@ -119,5 +152,39 @@ class ApiKeyAuthMiddleware:
             )
             await send({"type": "http.response.body", "body": body, "more_body": False})
             return
+
+        if self.limiter is not None:
+            bucket, limit = self._budget(*caller, scope["path"])
+            result = self.limiter.take(bucket, limit, 60, now)
+            if not result.allowed:
+                retry_after = str(max(1, math.ceil(result.reset_at - now)))
+                body = json.dumps(
+                    {
+                        "error": {
+                            "code": "rate_limited",
+                            "message": "Rate limit exceeded for this API key.",
+                        }
+                    },
+                    separators=(",", ":"),
+                ).encode("utf-8")
+                await send(
+                    {
+                        "type": "http.response.start",
+                        "status": 429,
+                        "headers": [
+                            (b"content-type", b"application/json"),
+                            (b"cache-control", b"private, no-store"),
+                            (b"x-content-type-options", b"nosniff"),
+                            (b"retry-after", retry_after.encode("ascii")),
+                            (b"ratelimit-limit", str(result.limit).encode("ascii")),
+                            (b"ratelimit-remaining", b"0"),
+                            (b"ratelimit-reset", retry_after.encode("ascii")),
+                        ],
+                    }
+                )
+                await send(
+                    {"type": "http.response.body", "body": body, "more_body": False}
+                )
+                return
 
         await self.app(scope, receive, send_with_private_cache_control)

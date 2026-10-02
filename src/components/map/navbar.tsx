@@ -43,6 +43,11 @@ export default function Navbar() {
             API Docs
           </Button>
         </Link>
+        <Link href="/keys" prefetch={false}>
+          <Button variant="ghost" size="sm" className="text-xs h-8">
+            API Key
+          </Button>
+        </Link>
         <a
           href="https://github.com/dhanyyudi/wilayah-id"
           target="_blank"
