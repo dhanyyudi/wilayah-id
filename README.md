@@ -17,6 +17,22 @@ REST API & Webmap interaktif untuk batas administrasi Indonesia: **38 provinsi, 
 - **PostGIS** — Full geometry data (MultiPolygon) untuk semua level administrasi
 - **Open Source** — Data Batas Administrasi dari [Ditjen Dukcapil Kemendagri (2024)](https://gis.dukcapil.kemendagri.go.id/peta/)
 
+## 🌐 Layanan Publik
+
+| Layanan | URL | Akses |
+|---------|-----|-------|
+| Webmap | `https://wilayah-id-web.gislabs.workers.dev` | Anonim |
+| REST + OGC API | `https://wilayah-id-api.dhanypedia.com/api/v1` | Anonim |
+| Vector tiles | `https://tiles.dhanypedia.com/{layer}/{z}/{x}/{y}.pbf` | Anonim |
+| MCP (Streamable HTTP) | `https://wilayah-id-mcp.dhanypedia.com/mcp` | Header `X-API-Key` |
+
+```bash
+curl "https://wilayah-id-api.dhanypedia.com/api/v1/regions/provinces?limit=1"
+```
+
+Hostname lama di `dhanypedia.it.com` sudah digantikan oleh `dhanypedia.com`.
+Klien yang masih memakai hostname lama perlu pindah ke URL di atas.
+
 ## 🚀 Quick Start
 
 ```bash
@@ -418,7 +434,7 @@ diaktifkan tanpa autentikasi atau pembatasan trafik yang sesuai.
 | Tile Generation | Tippecanoe + mb-util |
 | ETL | Python + GeoPandas |
 | Styling | Tailwind CSS v4 + shadcn/ui |
-| Deployment | Vercel |
+| Deployment | Cloudflare Workers (OpenNext) untuk web; homeserver di belakang Cloudflare Tunnel untuk API, tiles, dan MCP |
 
 ## 📊 Data Sources
 
