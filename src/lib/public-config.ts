@@ -1,5 +1,5 @@
-const DEFAULT_API_ORIGIN = "https://wilayah-id-api.dhanypedia.it.com";
-const DEFAULT_TILES_ORIGIN = "https://tiles.dhanypedia.it.com";
+const DEFAULT_API_ORIGIN = "https://wilayah-id-api.dhanypedia.com";
+const DEFAULT_TILES_ORIGIN = "https://tiles.dhanypedia.com";
 
 type PublicEnvironment = Record<string, string | undefined>;
 

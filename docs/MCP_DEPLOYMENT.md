@@ -16,7 +16,7 @@ placeholder and public HTTPS origin:
 
 ```dotenv
 MCP_API_KEYS_SHA256=<64-character-sha256-hex>
-MCP_PUBLIC_BASE_URL=https://wilayah-id-mcp-staging.dhanypedia.it.com
+MCP_PUBLIC_BASE_URL=https://wilayah-id-mcp-staging.dhanypedia.com
 ```
 
 `MCP_API_KEYS_SHA256` contains one or more comma-separated SHA-256 hashes. The
@@ -64,7 +64,7 @@ Validate the override without starting or building a container:
 
 ```bash
 MCP_API_KEYS_SHA256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
-MCP_PUBLIC_BASE_URL=https://wilayah-id-mcp-staging.dhanypedia.it.com \
+MCP_PUBLIC_BASE_URL=https://wilayah-id-mcp-staging.dhanypedia.com \
   docker compose \
     -f docker-compose.yml \
     -f deploy/docker-compose.homeserver.mcp.yml \
