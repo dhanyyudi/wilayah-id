@@ -282,8 +282,8 @@ WILAYAH_RUNTIME_ROLE=origin DATABASE_URL=... pnpm start
 ```
 
 `/api/health` tetap ditangani secara lokal dan tidak bergantung pada peran
-runtime. Cloudflare Worker dan Vercel tidak menetapkan variabel ini dan tetap
-menggunakan peran `proxy`.
+runtime. Cloudflare Worker tidak menetapkan variabel ini dan tetap menggunakan
+peran `proxy`.
 
 ### Response Format
 

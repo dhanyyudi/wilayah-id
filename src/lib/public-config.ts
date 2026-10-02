@@ -1,5 +1,6 @@
 const DEFAULT_API_ORIGIN = "https://wilayah-id-api.dhanypedia.com";
 const DEFAULT_TILES_ORIGIN = "https://tiles.dhanypedia.com";
+const DEFAULT_SITE_ORIGIN = DEFAULT_API_ORIGIN;
 
 type PublicEnvironment = Record<string, string | undefined>;
 
@@ -57,7 +58,7 @@ export function getPublicOrigins(env: PublicEnvironment = process.env) {
     ),
     site: parsePublicUrl(
       "NEXT_PUBLIC_SITE_URL",
-      env.NEXT_PUBLIC_SITE_URL ?? "https://wilayah-id-restapi.vercel.app",
+      env.NEXT_PUBLIC_SITE_URL ?? DEFAULT_SITE_ORIGIN,
       production,
     ),
   };
