@@ -1,0 +1,28 @@
+level,code,old_name,new_name,reason,evidence
+district,150705,S a d u,Sadu,letter spacing from PDF extraction,Kecamatan Sadu in Tanjung Jabung Timur; BIG 2026-06-12 carries the same artifact
+district,310102,Kepulauan Seribu Selatan.,Kepulauan Seribu Selatan,stray trailing period,BIG 2026-06-12 carries the same artifact
+village,1271151001,A u r,Aur,letter spacing from PDF extraction,BIG 2026-06-12 desa name
+village,1271151003,J a t i,Jati,letter spacing from PDF extraction,BIG 2026-06-12 desa name
+village,5303112005,N i a n,Nian,letter spacing from PDF extraction,BIG 2026-06-12 carries the same artifact
+village,7103122009,B e b u,Bebu,letter spacing from PDF extraction,BIG 2026-06-12 carries the same artifact
+village,7103122012,D a g h o,Dagho,letter spacing from PDF extraction,BIG 2026-06-12 carries the same artifact
+village,7104021005,B e o,Beo,letter spacing from PDF extraction,BIG 2026-06-12 desa name
+village,7104032003,A l o,Alo,letter spacing from PDF extraction,BIG 2026-06-12 desa name
+village,7104032004,N u n u,Nunu,letter spacing from PDF extraction,BIG 2026-06-12 desa name
+village,7104032005,R a i n i s,Rainis,letter spacing from PDF extraction,BIG 2026-06-12 desa name
+village,7104042006,E s s a n g,Essang,letter spacing from PDF extraction,BIG 2026-06-12 desa name
+village,7104082004,G e m e h,Gemeh,letter spacing from PDF extraction,BIG 2026-06-12 desa name
+village,7104102003,R i u n g,Riung,letter spacing from PDF extraction,BIG 2026-06-12 desa name
+village,7104102004,A m m a t,Ammat,letter spacing from PDF extraction,BIG 2026-06-12 desa name
+village,7104192008,K u m a,Kuma,letter spacing from PDF extraction,BIG 2026-06-12 desa name
+village,1212022004,Sibarani Nasampulu/Namungk up,Sibarani Nasampulu/Namungkup,word split by a line wrap,BIG 2026-06-12 desa name
+village,3306122035,Kedungpomahanwet an,Kedungpomahanwetan,word split by a line wrap,BIG 2026-06-12 desa name
+village,3306122037,Kedungpomahankulo n,Kedungpomahankulon,word split by a line wrap,BIG 2026-06-12 desa name
+village,3515122020,Bakungtemenggunga n,Bakungtemenggungan,word split by a line wrap,BIG 2026-06-12 desa name
+village,9504442005,Leragawi/Megagiraku k,Leragawi/Megagirakuk,word split by a line wrap,BIG 2026-06-12 desa name
+village,1101062024,Air Sialang Hilir.,Air Sialang Hilir,stray trailing period,BIG 2026-06-12 carries the same artifact
+village,1108172014,U Baro.,U Baro,stray trailing period,BIG 2026-06-12 carries the same artifact
+village,1277011012,Losung Batu.,Losung Batu,stray trailing period,BIG 2026-06-12 desa name
+village,7203112013,Ujumbou.,Ujumbou,stray trailing period,BIG 2026-06-12 desa name
+village,9120072005,Teuw*,Teuw,footnote marker kept in the name,BIG 2026-06-12 desa name
+village,7401011001,Nopember,19 Nopember,leading number dropped,BIG 2026-06-12 desa name

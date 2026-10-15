@@ -18,10 +18,10 @@ code,province_code,name,capital,type,is_administrative
 1117,11,Kabupaten Bener Meriah,Simpang Tiga Redelong,regency,False
 1118,11,Kabupaten Pidie Jaya,Meureundu,regency,False
 1171,11,Kota Banda Aceh,Banda Aceh,city,False
-1172,11,Kota Sabang Sumatera Utara,Sabang,city,False
+1172,11,Kota Sabang,Sabang,city,False
 1173,11,Kota Lhokseumawe,Lhokseumawe,city,False
 1174,11,Kota Langsa,Langsa,city,False
-1175,11,Kota Subulussalam Darussalam,Subulussalam,city,False
+1175,11,Kota Subulussalam,Subulussalam,city,False
 1201,12,Kabupaten Tapanuli Tengah,Sibolga,regency,False
 1202,12,Kabupaten Tapanuli Utara,Tarutung,regency,False
 1203,12,Kabupaten Tapanuli Selatan,Padang Sidempuan,regency,False
@@ -38,8 +38,8 @@ code,province_code,name,capital,type,is_administrative
 1214,12,Kabupaten Nias Selatan,Teluk Dalam,regency,False
 1215,12,Kabupaten Pakpak Bharat,Salak,regency,False
 1216,12,Kabupaten Humbang Hasundutan,Dolok Sanggul,regency,False
-1217,12,Kabupaten Samosir Bedagai,Pangururan,regency,False
-1218,12,Kabupaten Serdang Bedagai Bedagai,Sei Rampah,regency,False
+1217,12,Kabupaten Samosir,Pangururan,regency,False
+1218,12,Kabupaten Serdang Bedagai,Sei Rampah,regency,False
 1219,12,Kabupaten Batu Bara,Lima Puluh,regency,False
 1220,12,Kabupaten Padang Lawas Utara,Gunung Tua,regency,False
 1221,12,Kabupaten Padang Lawas,Sibuhuan,regency,False
@@ -61,7 +61,7 @@ code,province_code,name,capital,type,is_administrative
 1304,13,Kabupaten Tanah Datar,Batusangkar,regency,False
 1305,13,Kabupaten Padang Pariaman,Parik Malintang,regency,False
 1306,13,Kabupaten Agam,Lubuk Basung,regency,False
-1307,13,Kabupaten Lima Puluh,Sarilamak,regency,False
+1307,13,Kabupaten Lima Puluh Kota,Sarilamak,regency,False
 1308,13,Kabupaten Pasaman,Lubuk Sikaping,regency,False
 1309,13,Kabupaten Kepulauan Mentawai,Tuapejat,regency,False
 1310,13,Kabupaten Dharmasraya,Pulau Punjung,regency,False
@@ -108,7 +108,7 @@ code,province_code,name,capital,type,is_administrative
 1609,16,Kabupaten Ogan Komering Ulu Selatan,Muaradua,regency,False
 1610,16,Kabupaten Ogan Ilir,Indralaya,regency,False
 1611,16,Kabupaten Empat Lawang,Tebing Tinggi,regency,False
-1612,16,Kabupaten Penukal Abab Lematang,Talang Ubi,regency,False
+1612,16,Kabupaten Penukal Abab Lematang Ilir,Talang Ubi,regency,False
 1613,16,Kabupaten Musi Rawas Utara,Rupit,regency,False
 1671,16,Kota Palembang,Pelembang,city,False
 1672,16,Kota Pagar Alam,Pagar Alam,city,False
@@ -182,7 +182,7 @@ code,province_code,name,capital,type,is_administrative
 3273,32,Kota Bandung,Bandung,city,False
 3274,32,Kota Cirebon,Cirebon,city,False
 3275,32,Kota Bekasi,Bekasi,city,False
-3276,32,Kota Depok Kotamadya Daerah,Depok,city,False
+3276,32,Kota Depok,Depok,city,False
 3277,32,Kota Cimahi,Cimahi,city,False
 3278,32,Kota Tasikmalaya,Tasikmalaya,city,False
 3279,32,Kota Banjar,Banjar,city,False
@@ -239,7 +239,7 @@ code,province_code,name,capital,type,is_administrative
 3511,35,Kabupaten Bondowoso,Bondowoso,regency,False
 3512,35,Kabupaten Situbondo,Situbondo,regency,False
 3513,35,Kabupaten Probolinggo,Kraksaan,regency,False
-3514,35,Kabupaten Pasuruan Kecamatan Bangil,Bangil,regency,False
+3514,35,Kabupaten Pasuruan,Bangil,regency,False
 3515,35,Kabupaten Sidoarjo,Sidoarjo,regency,False
 3516,35,Kabupaten Mojokerto,Mojokerto,regency,False
 3517,35,Kabupaten Jombang,Jombang,regency,False
@@ -269,7 +269,7 @@ code,province_code,name,capital,type,is_administrative
 3603,36,Kabupaten Tangerang,Tigaraksa,regency,False
 3604,36,Kabupaten Serang,Ciruas,regency,False
 3671,36,Kota Tangerang,Tangerang,city,False
-3672,36,Kota Cilegon Kotamadya Daerah,Cilegon,city,False
+3672,36,Kota Cilegon,Cilegon,city,False
 3673,36,Kota Serang,Serang,city,False
 3674,36,Kota Tangerang Selatan,Ciputat,city,False
 5101,51,Kabupaten Jembrana,Negara,regency,False
@@ -350,39 +350,39 @@ code,province_code,name,capital,type,is_administrative
 6307,63,Kabupaten Hulu Sungai Tengah,Berabai,regency,False
 6308,63,Kabupaten Hulu Sungai Utara,Amuntai,regency,False
 6309,63,Kabupaten Tabalong,Tanjung,regency,False
-6310,63,Kabupaten Tanah Bumbu Balangan,Batulicin,regency,False
-6311,63,Kabupaten Balangan Balangan,Paringin,regency,False
+6310,63,Kabupaten Tanah Bumbu,Batulicin,regency,False
+6311,63,Kabupaten Balangan,Paringin,regency,False
 6371,63,Kota Banjarmasin,Banjarmasin,city,False
 6372,63,Kota Banjarbaru,Banjarbaru,city,False
 6401,64,Kabupaten Paser,Tana Paser,regency,False
 6402,64,Kabupaten Kutai Kartanegara,Tenggarong,regency,False
 6403,64,Kabupaten Berau,Tanjung Redeb,regency,False
-6407,64,Kabupaten Kutai Barat Kutai,Sendawar,regency,False
-6408,64,Kabupaten Kutai Timur Kutai,Sanggatta,regency,False
+6407,64,Kabupaten Kutai Barat,Sendawar,regency,False
+6408,64,Kabupaten Kutai Timur,Sanggatta,regency,False
 6409,64,Kabupaten Penajam Paser Utara,Penajam,regency,False
 6411,64,Kabupaten Mahakam Ulu,Long Bagun,regency,False
 6471,64,Kota Balikpapan,Balikpapan,city,False
 6472,64,Kota Samarinda,Samarinda,city,False
-6474,64,Kota Bontang Kutai,Bontang,city,False
+6474,64,Kota Bontang,Bontang,city,False
 6501,65,Kabupaten Bulungan,Tanjung Selor,regency,False
-6502,65,Kabupaten Malinau Kutai,Malinau,regency,False
-6503,65,Kabupaten Nunukan Kutai,Nunukan,regency,False
+6502,65,Kabupaten Malinau,Malinau,regency,False
+6503,65,Kabupaten Nunukan,Nunukan,regency,False
 6504,65,Kabupaten Tana Tidung,Tideng Pale,regency,False
 6571,65,Kota Tarakan,Tarakan,city,False
 7101,71,Kabupaten Bolaang Mongondow,Lolak,regency,False
 7102,71,Kabupaten Minahasa,Tondano,regency,False
 7103,71,Kabupaten Kepulauan Sangihe,Tahuna,regency,False
 7104,71,Kabupaten Kepulauan Talaud,Melongguane,regency,False
-7105,71,Kabupaten Minahasa Selatan Tomohon,Amurang,regency,False
+7105,71,Kabupaten Minahasa Selatan,Amurang,regency,False
 7106,71,Kabupaten Minahasa Utara,Air Madidi,regency,False
 7107,71,Kabupaten Minahasa Tenggara,Ratahan,regency,False
 7108,71,Kabupaten Bolaang Mongondow Utara,Boroko,regency,False
-7109,71,Kabupaten Kepulauan Siau Tagulandang,Ondong Siau,regency,False
+7109,71,Kabupaten Kepulauan Siau Tagulandang Biaro,Ondong Siau,regency,False
 7110,71,Kabupaten Bolaang Mongondow Timur,Tutuyan,regency,False
 7111,71,Kabupaten Bolaang Mongondow Selatan,Bolaang Uki,regency,False
 7171,71,Kota Manado,Manado,city,False
 7172,71,Kota Bitung,Bitung,city,False
-7173,71,Kota Tomohon Tomohon,Tomohon,city,False
+7173,71,Kota Tomohon,Tomohon,city,False
 7174,71,Kota Kotamobagu,Kotamobagu,city,False
 7201,72,Kabupaten Banggai,Luwuk,regency,False
 7202,72,Kabupaten Poso,Poso,regency,False
@@ -406,7 +406,7 @@ code,province_code,name,capital,type,is_administrative
 7307,73,Kabupaten Sinjai,Sinjai,regency,False
 7308,73,Kabupaten Bone,Watampone,regency,False
 7309,73,Kabupaten Maros,Maros,regency,False
-7310,73,Kabupaten Pangkajene,Pangkajene,regency,False
+7310,73,Kabupaten Pangkajene dan Kepulauan,Pangkajene,regency,False
 7311,73,Kabupaten Barru,Barru,regency,False
 7312,73,Kabupaten Soppeng,Watansoppeng,regency,False
 7313,73,Kabupaten Wajo,Sengkang,regency,False
@@ -416,7 +416,7 @@ code,province_code,name,capital,type,is_administrative
 7317,73,Kabupaten Luwu,Belopa,regency,False
 7318,73,Kabupaten Tana Toraja,Makale,regency,False
 7322,73,Kabupaten Luwu Utara,Masamba,regency,False
-7324,73,Kabupaten Luwu Timur Utara,Malili,regency,False
+7324,73,Kabupaten Luwu Timur,Malili,regency,False
 7326,73,Kabupaten Toraja Utara,Rantepao,regency,False
 7371,73,Kota Makassar,Makassar,city,False
 7372,73,Kota Parepare,Pare Pare,city,False
@@ -440,11 +440,11 @@ code,province_code,name,capital,type,is_administrative
 7472,74,Kota Bau Bau,Bau Bau,city,False
 7501,75,Kabupaten Gorontalo,Gorontalo,regency,False
 7502,75,Kabupaten Boalemo,Tilamuta,regency,False
-7503,75,Kabupaten Bone Bolango Pohuwato,Suwawa,regency,False
-7504,75,Kabupaten Pohuwato Pohuwato,Marisa,regency,False
+7503,75,Kabupaten Bone Bolango,Suwawa,regency,False
+7504,75,Kabupaten Pohuwato,Marisa,regency,False
 7505,75,Kabupaten Gorontalo Utara,Kwandang,regency,False
 7571,75,Kota Gorontalo,Gorontalo,city,False
-7601,76,Kabupaten Pasangkayu Utara,Pasangkayu,regency,False
+7601,76,Kabupaten Pasangkayu,Pasangkayu,regency,False
 7602,76,Kabupaten Mamuju,Mamuju,regency,False
 7603,76,Kabupaten Mamasa,Mamasa,regency,False
 7604,76,Kabupaten Polewali Mandar,Polewali,regency,False
@@ -456,21 +456,21 @@ code,province_code,name,capital,type,is_administrative
 8104,81,Kabupaten Buru,Namlea,regency,False
 8105,81,Kabupaten Seram Bagian Timur,Dataran Hunimoa,regency,False
 8106,81,Kabupaten Seram Bagian Barat,Dataran Hunipopu,regency,False
-8107,81,Kabupaten Kepulauan Aru Seram,Dobo,regency,False
+8107,81,Kabupaten Kepulauan Aru,Dobo,regency,False
 8108,81,Kabupaten Maluku Barat Daya,Tiakur,regency,False
 8109,81,Kabupaten Buru Selatan,Namrole,regency,False
 8171,81,Kota Ambon,Ambon,city,False
 8172,81,Kota Tual,Tual,city,False
-8201,82,Kabupaten Halmahera Barat Halmahera,Jailolo,regency,False
+8201,82,Kabupaten Halmahera Barat,Jailolo,regency,False
 8202,82,Kabupaten Halmahera Tengah,Weda,regency,False
-8203,82,Kabupaten Halmahera Utara Halmahera,Tobelo,regency,False
-8204,82,Kabupaten Halmahera Selatan Halmahera,Labuha,regency,False
-8205,82,Kabupaten Kepulauan Sula Halmahera,Sanana,regency,False
-8206,82,Kabupaten Halmahera Timur Halmahera,Maba,regency,False
+8203,82,Kabupaten Halmahera Utara,Tobelo,regency,False
+8204,82,Kabupaten Halmahera Selatan,Labuha,regency,False
+8205,82,Kabupaten Kepulauan Sula,Sanana,regency,False
+8206,82,Kabupaten Halmahera Timur,Maba,regency,False
 8207,82,Kabupaten Pulau Morotai,Morotai Selatan,regency,False
 8208,82,Kabupaten Pulau Taliabu,Taliabu Barat,regency,False
 8271,82,Kota Ternate,Ternate,city,False
-8272,82,Kota Tidore Kepulauan Halmahera,Kota Tidore Kepulauan,city,False
+8272,82,Kota Tidore Kepulauan,Kota Tidore Kepulauan,city,False
 9103,91,Kabupaten Jayapura,Jayapura,regency,False
 9105,91,Kabupaten Kepulauan Yapen,Serui,regency,False
 9106,91,Kabupaten Biak Numfor,Biak,regency,False
@@ -491,7 +491,7 @@ code,province_code,name,capital,type,is_administrative
 9302,93,Kabupaten Boven Digoel,Tanah Merah,regency,False
 9303,93,Kabupaten Mappi,Kepi,regency,False
 9304,93,Kabupaten Asmat,Agats,regency,False
-9401,94,Kabupaten Nabire Paniai,Nabire,regency,False
+9401,94,Kabupaten Nabire,Nabire,regency,False
 9402,94,Kabupaten Puncak Jaya,Kota Mulia,regency,False
 9403,94,Kabupaten Paniai,Enarotali,regency,False
 9404,94,Kabupaten Mimika,Timika,regency,False

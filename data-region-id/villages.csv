@@ -106,7 +106,7 @@ code,district_code,name,type
 1101062021,110106,Gadang,village
 1101062022,110106,Baru,village
 1101062023,110106,Ladang Kasik Putih,village
-1101062024,110106,Air Sialang Hilir.,village
+1101062024,110106,Air Sialang Hilir,village
 1101062025,110106,Air Sialang Hulu,village
 1101062026,110106,Air Sialang Tengah,village
 1101062027,110106,Balai,village
@@ -3765,7 +3765,7 @@ code,district_code,name,type
 1108172011,110817,Cempeudak,village
 1108172012,110817,Matang Teungoh,village
 1108172013,110817,Pucok Alue,village
-1108172014,110817,U Baro.,village
+1108172014,110817,U Baro,village
 1108172015,110817,Trieng,village
 1108172016,110817,Lhok Reuhat,village
 1108172017,110817,Lueng Baro,village
@@ -9246,7 +9246,7 @@ code,district_code,name,type
 1212021001,121202,Pasar Laguboti,urban_village
 1212022002,121202,Sibuea,village
 1212022003,121202,Sintong Marnipi,village
-1212022004,121202,Sibarani Nasampulu/Namungk up,village
+1212022004,121202,Sibarani Nasampulu/Namungkup,village
 1212022005,121202,Aruan,village
 1212022006,121202,Sidulang,village
 1212022007,121202,Ujung Tanduk,village
@@ -12206,9 +12206,9 @@ code,district_code,name,type
 1271141005,127114,Tembung,urban_village
 1271141006,127114,Bandar Selamat,urban_village
 1271141007,127114,Bantan Timur,urban_village
-1271151001,127115,A u r,urban_village
+1271151001,127115,Aur,urban_village
 1271151002,127115,Hamdan,urban_village
-1271151003,127115,J a t i,urban_village
+1271151003,127115,Jati,urban_village
 1271151004,127115,Sukaraja,urban_village
 1271151005,127115,Sei Mati,urban_village
 1271151006,127115,Kampung Baru,urban_village
@@ -12440,7 +12440,7 @@ code,district_code,name,type
 1277011009,127701,Sadabuan,urban_village
 1277011010,127701,Panyanggar,urban_village
 1277011011,127701,Bonan Dolok,urban_village
-1277011012,127701,Losung Batu.,urban_village
+1277011012,127701,Losung Batu,urban_village
 1277011013,127701,Timbangan,urban_village
 1277011014,127701,Bincar,urban_village
 1277011015,127701,Kantin,urban_village
@@ -33768,9 +33768,9 @@ code,district_code,name,type
 3306122032,330612,Wanurojo,village
 3306122033,330612,Rejowinangun,village
 3306122034,330612,Kaliurip,village
-3306122035,330612,Kedungpomahanwet an,village
+3306122035,330612,Kedungpomahanwetan,village
 3306122036,330612,Karangluas,village
-3306122037,330612,Kedungpomahankulo n,village
+3306122037,330612,Kedungpomahankulon,village
 3306122038,330612,Sukogelap,village
 3306122039,330612,Gunungteges,village
 3306122040,330612,Purbayan,village
@@ -44629,7 +44629,7 @@ code,district_code,name,type
 3515122017,351512,Waruberon,village
 3515122018,351512,Bogempinggir,village
 3515122019,351512,Kedungsukodani,village
-3515122020,351512,Bakungtemenggunga n,village
+3515122020,351512,Bakungtemenggungan,village
 3515131005,351513,Taman,urban_village
 3515131015,351513,Geluran,urban_village
 3515131017,351513,Kalijaten,urban_village
@@ -53266,7 +53266,7 @@ code,district_code,name,type
 5303112002,530311,Akomi,village
 5303112003,530311,Bijaepasu,village
 5303112004,530311,Neonasi,village
-5303112005,530311,N i a n,village
+5303112005,530311,Nian,village
 5303112006,530311,Tuabatan Barat,village
 5303122001,530312,Oelneke,village
 5303122002,530312,Oetulu,village
@@ -63932,10 +63932,10 @@ code,district_code,name,type
 7103122006,710312,Ulung Peliang,village
 7103122007,710312,Menggawa,village
 7103122008,710312,Kalinda,village
-7103122009,710312,B e b u,village
+7103122009,710312,Bebu,village
 7103122010,710312,Makalekuhe,village
 7103122011,710312,Pananaru,village
-7103122012,710312,D a g h o,village
+7103122012,710312,Dagho,village
 7103122013,710312,Mahumu,village
 7103122014,710312,Lelipang,village
 7103122015,710312,Menggawa II,village
@@ -64049,15 +64049,15 @@ code,district_code,name,type
 7104012007,710401,Musi,village
 7104012015,710401,Talolang,village
 7104012017,710401,Sereh I,village
-7104021005,710402,B e o,urban_village
+7104021005,710402,Beo,urban_village
 7104021017,710402,Beo Timur,urban_village
 7104021018,710402,Beo Barat,urban_village
 7104022011,710402,Bantik,village
 7104022019,710402,Bengel,village
 7104022020,710402,Bantik Lama,village
-7104032003,710403,A l o,village
-7104032004,710403,N u n u,village
-7104032005,710403,R a i n i s,village
+7104032003,710403,Alo,village
+7104032004,710403,Nunu,village
+7104032005,710403,Rainis,village
 7104032006,710403,Bantane,village
 7104032007,710403,Tabang,village
 7104032014,710403,Parangen,village
@@ -64066,7 +64066,7 @@ code,district_code,name,type
 7104032020,710403,Nunu Utara,village
 7104032021,710403,Rainis Batupenga,village
 7104032022,710403,Alo Utara,village
-7104042006,710404,E s s a n g,village
+7104042006,710404,Essang,village
 7104042007,710404,Lalue,village
 7104042008,710404,Bulude,village
 7104042016,710404,Maririk,village
@@ -64111,7 +64111,7 @@ code,district_code,name,type
 7104082001,710408,Mamahan,village
 7104082002,710408,Bambung,village
 7104082003,710408,Taturan,village
-7104082004,710408,G e m e h,village
+7104082004,710408,Gemeh,village
 7104082005,710408,Arangkaa,village
 7104082006,710408,Malat,village
 7104082007,710408,Apan,village
@@ -64133,8 +64133,8 @@ code,district_code,name,type
 7104092008,710409,Akas Balane,village
 7104102001,710410,Tuabatu,village
 7104102002,710410,Dapalan,village
-7104102003,710410,R i u n g,village
-7104102004,710410,A m m a t,village
+7104102003,710410,Riung,village
+7104102004,710410,Ammat,village
 7104102005,710410,Binalang,village
 7104102006,710410,Ganalo,village
 7104102007,710410,Dapihe,village
@@ -64193,7 +64193,7 @@ code,district_code,name,type
 7104192005,710419,Batumbalango,village
 7104192006,710419,Ambia,village
 7104192007,710419,Ambia Utara,village
-7104192008,710419,K u m a,village
+7104192008,710419,Kuma,village
 7104192009,710419,Kuma Selatan,village
 7105012001,710501,Sinisir,village
 7105012002,710501,Kakenturan,village
@@ -65822,7 +65822,7 @@ code,district_code,name,type
 7203112010,720311,Lompio,village
 7203112011,720311,Lende,village
 7203112012,720311,Lende Tovea,village
-7203112013,720311,Ujumbou.,village
+7203112013,720311,Ujumbou,village
 7203122006,720312,Labean,village
 7203122007,720312,Lombonga,village
 7203122008,720312,Meli,village
@@ -70318,7 +70318,7 @@ code,district_code,name,type
 7373091003,737309,Rampoang,urban_village
 7373091004,737309,To'Bulung,urban_village
 7373091005,737309,Buntu Datu,urban_village
-7401011001,740101,Nopember,urban_village
+7401011001,740101,19 Nopember,urban_village
 7401011002,740101,Wundulako,urban_village
 7401011003,740101,Lamekongga,urban_village
 7401011004,740101,Kowioha,urban_village
@@ -77350,7 +77350,7 @@ code,district_code,name,type
 9120072001,912007,Kamai,village
 9120072002,912007,Dadat,village
 9120072003,912007,Kerema,village
-9120072005,912007,Teuw*,village
+9120072005,912007,Teuw,village
 9120072006,912007,Watiaro,village
 9120072007,912007,Gesa Baru,village
 9120072008,912007,Baitanisa,village
@@ -81758,7 +81758,7 @@ code,district_code,name,type
 9504442002,950444,Aburage,village
 9504442003,950444,Kogoyapura,village
 9504442004,950444,Erimbur,village
-9504442005,950444,Leragawi/Megagiraku k,village
+9504442005,950444,Leragawi/Megagirakuk,village
 9504442006,950444,Longgoboma,village
 9504442007,950444,Tingwi,village
 9504442008,950444,Gubura,village

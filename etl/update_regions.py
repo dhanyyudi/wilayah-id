@@ -1,80 +1,84 @@
 """
-Update Region Codes from upstream (nicnocquee/region-id).
+Update Region Codes from upstream (lokabisa-oss/region-id).
 
-Extracts the downloaded ZIP and updates CSV files in data-region-id/.
-Run AFTER the GitHub Actions download step (or manually download the ZIP first).
+Downloads the CSV assets of one region-id release, checks each against the
+SHA-256 in that release's metadata, copies them into data-region-id/, then
+reapplies the local name corrections in data-region-id/name-corrections.csv.
 
 Usage:
     source etl-venv/bin/activate
-    # Optionally download manually:
-    # curl -L -o data-downloads/region-id-latest.zip \
-    #   https://github.com/nicnocquee/region-id/archive/refs/heads/main.zip
-    python etl/update_regions.py
+    python etl/update_regions.py                 # pinned release
+    python etl/update_regions.py --tag v1.0.3    # another release
 """
 
+import argparse
+import hashlib
+import json
 import shutil
 import sys
-import zipfile
+import tempfile
+import urllib.request
 from pathlib import Path
 
-import pandas as pd
+from region_names import CorrectionMismatch, apply_corrections, artifact_report
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DOWNLOAD_DIR = PROJECT_ROOT / "data-downloads"
 DATA_DIR = PROJECT_ROOT / "data-region-id"
 
-# CSV files to update: local filename → possible names inside ZIP
-CSV_MAP = {
-    "provinces.csv":  ["provinces.csv"],
-    "regencies.csv":  ["regencies.csv"],
-    "districts.csv":  ["districts.csv"],
-    "villages.csv":   ["villages.csv"],
-}
+REPO = "lokabisa-oss/region-id"
+DEFAULT_TAG = "v1.0.2"
+ASSETS = ["provinces.csv", "regencies.csv", "districts.csv", "villages.csv", "regions_id.csv"]
 
 
-def find_file_in_dir(directory: Path, candidates: list[str]) -> Path | None:
-    for name in candidates:
-        for path in directory.rglob(name):
-            return path
-    return None
+def fetch(url: str) -> bytes:
+    with urllib.request.urlopen(url, timeout=120) as resp:
+        return resp.read()
 
 
 def main() -> None:
-    print("=== Update Region Codes ===")
+    parser = argparse.ArgumentParser(description="Update region-id CSVs")
+    parser.add_argument("--tag", default=DEFAULT_TAG, help=f"release tag (default {DEFAULT_TAG})")
+    args = parser.parse_args()
+    version = args.tag.lstrip("v")
 
-    zip_path = DOWNLOAD_DIR / "region-id-latest.zip"
-    if not zip_path.exists():
-        print(f"ERROR: {zip_path} not found.")
-        print("Download first:")
-        print("  curl -L -o data-downloads/region-id-latest.zip \\")
-        print("    https://github.com/nicnocquee/region-id/archive/refs/heads/main.zip")
+    print(f"=== Update Region Codes ({REPO} {args.tag}) ===")
+    meta_name = f"region-id-{version}.json"
+    meta_raw = fetch(f"https://raw.githubusercontent.com/{REPO}/{args.tag}/metadata/releases/{meta_name}")
+    expected = json.loads(meta_raw)["assets"]
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_dir = Path(tmp)
+        for name in ASSETS:
+            data = fetch(f"https://github.com/{REPO}/releases/download/{args.tag}/{name}")
+            digest = hashlib.sha256(data).hexdigest()
+            if digest != expected[name]["sha256"]:
+                print(f"ERROR: {name} sha256 {digest} does not match release metadata")
+                sys.exit(1)
+            (tmp_dir / name).write_bytes(data)
+            print(f"  Downloaded {name}: {len(data):,} bytes, sha256 ok")
+
+        for name in ASSETS:
+            shutil.copy2(tmp_dir / name, DATA_DIR / name)
+
+    for old_meta in DATA_DIR.glob("region-id-*.json"):
+        old_meta.unlink()
+    (DATA_DIR / meta_name).write_bytes(meta_raw)
+
+    try:
+        result = apply_corrections(DATA_DIR)
+    except CorrectionMismatch as exc:
+        print(f"ERROR: upstream changed a corrected name, review name-corrections.csv: {exc}")
         sys.exit(1)
+    for filename, changed in result.items():
+        print(f"  {filename}: {changed} names corrected locally")
 
-    extract_dir = DOWNLOAD_DIR / "region-id-extracted"
-    extract_dir.mkdir(parents=True, exist_ok=True)
+    leftovers = artifact_report(DATA_DIR)
+    if leftovers:
+        print(f"\n{len(leftovers)} names still look like PDF artifacts; review them:")
+        for level, code, name, labels in leftovers:
+            print(f"  {level:9} {code:12} {name!r} ({', '.join(labels)})")
 
-    print(f"  Extracting {zip_path.name}...")
-    with zipfile.ZipFile(zip_path, "r") as z:
-        z.extractall(extract_dir)
-
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    updated = 0
-
-    for local_name, candidates in CSV_MAP.items():
-        src = find_file_in_dir(extract_dir, candidates)
-        if src is None:
-            print(f"  WARNING: {local_name} not found in ZIP, skipping")
-            continue
-
-        dst = DATA_DIR / local_name
-        shutil.copy2(src, dst)
-        row_count = len(pd.read_csv(dst))
-        print(f"  Updated {local_name}: {row_count} rows")
-        updated += 1
-
-    shutil.rmtree(extract_dir, ignore_errors=True)
-    print(f"\nUpdated {updated}/{len(CSV_MAP)} CSV files in {DATA_DIR.name}/")
-    print("Done. Re-run ETL to apply changes to database: python etl/import_all.py")
+    print("\nDone. Re-run ETL to apply changes to database: python etl/import_dukcapil.py")
 
 
 if __name__ == "__main__":

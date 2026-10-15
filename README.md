@@ -331,7 +331,7 @@ pencabutan key, dan token proxy dijelaskan di
   "data": { ... },
   "meta": {
     "total": 38,
-    "source": "region-id v1.0.1 (lokabisa-oss)"
+    "source": "region-id v1.0.2 (lokabisa-oss)"
   }
 }
 ```
@@ -483,7 +483,7 @@ diaktifkan tanpa autentikasi atau pembatasan trafik yang sesuai.
 | Dataset | Source | Records |
 |---------|--------|---------|
 | Admin boundaries (SHP) | [Ditjen Dukcapil Kemendagri (2024)](https://gis.dukcapil.kemendagri.go.id/peta/) | 38 + 514 + 7.285 + 83.762 |
-| Region codes | [region-id](https://github.com/nicnocquee/region-id) (Kepmendagri 2025) | 91.248 |
+| Region codes | [region-id v1.0.2](https://github.com/lokabisa-oss/region-id/releases/tag/v1.0.2) (Kepmendagri 2025), with local name fixes in `data-region-id/name-corrections.csv` | 91.248 |
 | Postal codes | [postal-code-id](https://github.com/nicnocquee/postal-code-id) | 77.721 |
 
 ## 📁 Project Structure

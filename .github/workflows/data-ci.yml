@@ -1,0 +1,34 @@
+name: Data CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "data-region-id/**"
+      - "etl/region_names.py"
+      - "etl/update_regions.py"
+      - "etl/tests/**"
+      - ".github/workflows/data-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "data-region-id/**"
+      - "etl/region_names.py"
+      - "etl/update_regions.py"
+      - "etl/tests/**"
+      - ".github/workflows/data-ci.yml"
+
+jobs:
+  region-names:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Test region names
+        run: python -m unittest discover -s etl/tests -v

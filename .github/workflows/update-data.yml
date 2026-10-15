@@ -48,9 +48,7 @@ jobs:
           # Download from official sources
           echo "Downloading latest data..."
           
-          # Region codes (GitHub)
-          curl -L -o data-downloads/region-id-latest.zip \
-            https://github.com/lokabisa-oss/region-id/archive/refs/heads/main.zip || true
+          # Region codes: etl/update_regions.py downloads the pinned release itself
 
           # Postal codes (GitHub)
           curl -L -o data-downloads/postal-code-id-latest.zip \

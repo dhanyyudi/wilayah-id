@@ -1,0 +1,56 @@
+{
+  "dataset": "region-id",
+  "version": "1.0.2",
+  "tag": "v1.0.2",
+  "status": "stable",
+  "source": {
+    "name": "Kementerian Dalam Negeri Republik Indonesia",
+    "document": "Kepmendagri - Kode dan Data Wilayah Administrasi",
+    "document_hash": {
+      "algorithm": "sha256",
+      "value": "4a40e41cc2be515ca5b88df17a91e3f7ac6161ce7326a9fd38691753efa6b3fd"
+    }
+  },
+  "generated_at": "2026-10-10T08:11:16.946317+00:00",
+  "levels": [
+    "province",
+    "regency",
+    "district",
+    "village"
+  ],
+  "records": {
+    "provinces": 38,
+    "regencies": 514,
+    "districts": 7285,
+    "villages": 83762
+  },
+  "assets": {
+    "provinces.csv": {
+      "bytes": 1098,
+      "sha256": "62a195d763e124535a66913c6a871a657286b7b7d20ea14ee46d88a186cfb81d"
+    },
+    "regencies.csv": {
+      "bytes": 26658,
+      "sha256": "58e461019b32c43f267c872a5093e79ae6ea0f2401b92dda5dc8617cc17ffc22"
+    },
+    "districts.csv": {
+      "bytes": 171820,
+      "sha256": "dfd12f48d198b675d9b71c5987b38b2d4218681dd1bad1c4b43e3e4339468dcd"
+    },
+    "villages.csv": {
+      "bytes": 3193454,
+      "sha256": "61a39d69d54cf6189642a00c42fd9215e89d1dd64633d4cc1237b3bb67e1f773"
+    },
+    "regions_id.csv": {
+      "bytes": 9740760,
+      "sha256": "b3b459453c18a1b64357c807ac817fb9f2d7c53c4247731512c9f864e922939a"
+    }
+  },
+  "corrections": {
+    "manifest": "kepmendagri_parser/corrections/regency_name_corrections.json",
+    "sha256": "9d97e3382e818c0664f6817a15fe1849ff99e8529a8690315626126010ee3a2a",
+    "count": 32
+  },
+  "format": "csv",
+  "encoding": "utf-8"
+}
