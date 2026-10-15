@@ -7,6 +7,8 @@ on:
       - "data-region-id/**"
       - "etl/region_names.py"
       - "etl/update_regions.py"
+      - "etl/big_boundaries.py"
+      - "etl/requirements-big.txt"
       - "etl/tests/**"
       - ".github/workflows/data-ci.yml"
   pull_request:
@@ -15,6 +17,8 @@ on:
       - "data-region-id/**"
       - "etl/region_names.py"
       - "etl/update_regions.py"
+      - "etl/big_boundaries.py"
+      - "etl/requirements-big.txt"
       - "etl/tests/**"
       - ".github/workflows/data-ci.yml"
 
@@ -32,3 +36,20 @@ jobs:
 
       - name: Test region names
         run: python -m unittest discover -s etl/tests -v
+
+  big-boundaries:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install geometry dependencies
+        run: pip install -r etl/requirements-big.txt
+
+      - name: Test BIG boundary preparation
+        run: python -m unittest discover -s etl/tests -p "test_big_boundaries.py" -v
