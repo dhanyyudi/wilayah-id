@@ -1,0 +1,5 @@
+# etl/big_boundaries.py: coverage_simplify needs Shapely 2.1+ built on GEOS 3.12+
+geopandas==1.1.1
+shapely==2.1.2
+pyarrow==21.0.0
+pandas==2.3.3
