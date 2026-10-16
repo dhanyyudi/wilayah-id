@@ -1,531 +1,215 @@
-# 🇮🇩 wilayah-id — API Batas Administrasi Indonesia
+# wilayah-id
 
-REST API & Webmap interaktif untuk batas administrasi Indonesia: **38 provinsi, 514 kabupaten/kota, 7.282 kecamatan, 83.529 desa/kelurahan**.
+API dan webmap batas administrasi Indonesia: **38 provinsi, 514 kabupaten/kota,
+7.282 kecamatan, 83.529 desa/kelurahan**, lengkap dengan geometri, kode
+Kemendagri, kode pos, dan data penduduk. Tersedia sebagai REST, OGC (API
+Features, WFS, WMS), vector tiles, dan server MCP untuk agent LLM.
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![MapLibre GL](https://img.shields.io/badge/MapLibre_GL-v5-blue)
 ![PostGIS](https://img.shields.io/badge/PostGIS-3.5-green)
 ![License](https://img.shields.io/badge/license-MIT-brightgreen)
 
-## ✨ Features
-
-- **REST API** — 22 endpoints untuk query wilayah, kode pos, batas (GeoJSON), reverse geocode, OGC WMS/WFS
-- **Vector Tiles** — 4 layer MVT (.pbf) via Tippecanoe, served statik dari homeserver origin di belakang Cloudflare
-- **Webmap Interaktif** — MapLibre GL JS v5 via [mapcn](https://mapcn.dev), dark/light mode
-- **OGC Compliant** — WMS 1.3.0 (GetCapabilities, GetMap, GetFeatureInfo) + WFS 2.0 (GetFeature, DescribeFeatureType)
-- **MCP Server** — Integrasi langsung dengan Claude Desktop / Cursor Server via Model Context Protocol (FastMCP)
-- **PostGIS** — Full geometry data (MultiPolygon) untuk semua level administrasi
-- **Open Source** — Geometri batas dari [Badan Informasi Geospasial (BIG), BATASWILAYAH edisi 2026-06-12](https://geoservices.big.go.id/rbi/rest/services/BATASWILAYAH), nama wilayah Kepmendagri 2025, data penduduk [Ditjen Dukcapil Kemendagri (2024 S1)](https://gis.dukcapil.kemendagri.go.id/peta/)
-
-## 🌐 Layanan Publik
+## Layanan publik
 
 | Layanan | URL | Akses |
 |---------|-----|-------|
-| Webmap | `https://wilayah-id-web.gislabs.workers.dev` | Anonim |
-| REST + OGC API | `https://wilayah-id-api.dhanypedia.com/api/v1` | Anonim |
+| Webmap dan dokumentasi | https://wilayah-id-web.gislabs.workers.dev | Anonim |
+| REST dan OGC API | `https://wilayah-id-api.dhanypedia.com/api/v1` | Anonim, API key opsional |
 | Vector tiles | `https://tiles.dhanypedia.com/{layer}/{z}/{x}/{y}.pbf` | Anonim |
 | MCP (Streamable HTTP) | `https://wilayah-id-mcp.dhanypedia.com/mcp` | Header `X-API-Key` |
 
 ```bash
 curl "https://wilayah-id-api.dhanypedia.com/api/v1/regions/provinces?limit=1"
+curl "https://wilayah-id-api.dhanypedia.com/api/v1/boundaries/reverse?lat=-6.1754&lng=106.8272"
 ```
 
-Hostname lama di `dhanypedia.it.com` sudah digantikan oleh `dhanypedia.com`.
-Klien yang masih memakai hostname lama perlu pindah ke URL di atas.
+## Data
 
-## 🚀 Quick Start
+| Komponen | Sumber | Edisi |
+|----------|--------|-------|
+| Geometri batas | [Badan Informasi Geospasial (BIG), BATASWILAYAH](https://geoservices.big.go.id/rbi/rest/services/BATASWILAYAH) | 2026-06-12 |
+| Kode dan nama wilayah | Kepmendagri 2025 via [region-id v1.0.2](https://github.com/lokabisa-oss/region-id/releases/tag/v1.0.2), dengan koreksi di `data-region-id/name-corrections.csv` | 2025 |
+| Penduduk, KK, kepadatan, luas resmi | [Ditjen Dukcapil Kemendagri](https://gis.dukcapil.kemendagri.go.id/peta/) | 2024 Semester 1 |
+| Kode pos | [postal-code-id](https://github.com/nicnocquee/postal-code-id) | |
 
-```bash
-# Clone
-git clone https://github.com/dhanyyudi/wilayah-id.git
-cd id-region-restapi
+- Desa dan kecamatan memakai layer BIG skala 1:10.000. Kab/kota dibentuk dari
+  gabungan kecamatan, dan provinsi dari gabungan kab/kota, sehingga setiap
+  level pas di dalam level di atasnya.
+- Setiap desa membawa `status_batas` dari BIG. Sebagian besar berstatus
+  **Batas Indikatif**, artinya bukan batas definitif dan tidak bisa menjadi
+  dasar hukum.
+- Area yang belum masuk wilayah administrasi mana pun disimpan terpisah di
+  tabel `area_tidak_terdefinisi`.
+- Aturan lengkap, hasil uji, dan cara menjalankan ulang ada di
+  [`docs/BIG_2026_MIGRATION.md`](docs/BIG_2026_MIGRATION.md).
 
-# Install dependencies
-pnpm install
+## REST API
 
-# Setup environment
-cp .env.example .env.local
-# Edit .env.local with your Neon PostgreSQL DATABASE_URL
+Base URL `/api/v1`. Respons berbentuk `{ "data": ..., "meta": { "total", "source", "snapshot", "attribution" } }`.
 
-# Run ETL (requires Python 3.11+)
-python -m venv etl-venv && source etl-venv/bin/activate
-pip install geopandas psycopg2-binary python-dotenv tqdm pyogrio shapely
-python etl/import_all.py
+| Endpoint | Isi |
+|----------|-----|
+| `GET /regions/provinces` | Daftar provinsi |
+| `GET /regions/regencies?province_code=` | Kab/kota dalam satu provinsi |
+| `GET /regions/districts?regency_code=` | Kecamatan dalam satu kab/kota |
+| `GET /regions/villages?district_code=` | Desa/kelurahan dalam satu kecamatan |
+| `GET /regions/{level}/{kode}` | Detail satu wilayah beserta hierarkinya |
+| `GET /regions/search?q=&level=` | Cari wilayah di semua level |
+| `GET /boundaries/{level}?...&geometry=true` | Batas wilayah sebagai GeoJSON |
+| `GET /boundaries/{level}/{kode}?geometry=true` | Batas satu wilayah |
+| `GET /boundaries/reverse?lat=&lng=&level=` | Koordinat ke wilayah (reverse geocoding) |
+| `GET /postal-codes?village_code=\|postal_code=\|district_code=` | Kode pos |
+| `GET /postal-codes/lookup?q=` | Cari kode pos berdasarkan awalan |
+| `GET /api/health` | Health check (di luar `/api/v1`) |
 
-# Generate vector tiles (requires tippecanoe + mb-util)
-python etl/generate_tiles.py
+`{level}` adalah `provinces`, `regencies`, `districts`, atau `villages`.
+Respons desa memuat `status_batas` dan `edisi_geometri` (`YYYY-MM-DD`).
 
-# Start dev server
-pnpm dev
-```
+## OGC
 
-## ✅ Web verification and health
+Koleksi di semua protokol: `provinces`, `regencies`, `districts`, `villages`.
 
-The web health endpoint is `GET /api/health`. A healthy process returns HTTP
-200, a JSON body whose `status` value is `ok`, and a `Cache-Control` header
-containing `no-store`.
+| Protokol | Endpoint | Catatan |
+|----------|----------|---------|
+| OGC API Features (Core, GeoJSON) | `/ogc/features` | `bbox` CRS84, `limit` (maks 1.000), `offset`, `properties`, `f=json\|geojson\|html` |
+| WFS 2.0 | `/ogc/wfs?SERVICE=WFS&REQUEST=GetCapabilities` | `GetFeature` sebagai GeoJSON atau GML 3.2, `DescribeFeatureType` |
+| WMS 1.3.0 | `/ogc/wms?SERVICE=WMS&REQUEST=GetCapabilities` | `GetMap` PNG/JPEG maks 2.048×2.048 px, `GetFeatureInfo` |
 
-Run the complete web release gate before publishing a container:
+Parameter yang tidak didukung ditolak dengan exception standar OGC, tidak
+diabaikan diam-diam. WFS `FILTER` dan `datetime` belum didukung. Geometri
+disajikan dalam CRS84 (lon, lat) dengan 6 desimal.
 
-```bash
-(
-  set -euo pipefail
+## API key dan batas pemakaian
 
-  image_name="wilayah-id:phase-1"
-  container_name="wilayah-id-phase-1-health-$BASHPID"
-  health_port=$((20000 + BASHPID % 20000))
-  health_headers="$(mktemp)"
-
-  if docker container inspect "${container_name}" >/dev/null 2>&1; then
-    printf 'Refusing to replace existing container %s\n' \
-      "${container_name}" >&2
-    exit 1
-  fi
-
-  cleanup() {
-    docker rm -f "${container_name}" >/dev/null 2>&1 || true
-    rm -f "${health_headers}"
-  }
-  trap cleanup EXIT
-  trap 'exit 130' INT
-  trap 'exit 143' TERM
-
-  pnpm install --frozen-lockfile
-  pnpm lint
-  pnpm typecheck
-  pnpm test
-  pnpm build
-  pnpm verify:runtime
-  pnpm build:cf
-  pnpm exec wrangler deploy --dry-run
-  docker build --tag "${image_name}" .
-  docker run --rm -d \
-    --name "${container_name}" \
-    -p "127.0.0.1:${health_port}:3000" \
-    "${image_name}"
-
-  health_json=""
-  health_status=""
-  for attempt in $(seq 1 30); do
-    if health_json=$(curl \
-      --connect-timeout 1 \
-      --max-time 2 \
-      --dump-header "${health_headers}" \
-      --fail --silent --show-error \
-      "http://127.0.0.1:${health_port}/api/health" 2>/dev/null); then
-      if health_status=$(printf '%s' "${health_json}" | node -p \
-        'JSON.parse(require("fs").readFileSync(0, "utf8")).status') && \
-        test "${health_status}" = "ok" && \
-        grep -qi '^cache-control:.*no-store' "${health_headers}"; then
-        break
-      fi
-    fi
-
-    if test "${attempt}" -eq 30; then
-      docker logs "${container_name}" || true
-      exit 1
-    fi
-    sleep 1
-  done
-
-  printf 'health_port=%s health=%s\n' "${health_port}" "${health_json}"
-  test "${health_status}" = "ok"
-  grep -qi '^cache-control:.*no-store' "${health_headers}"
-)
-```
-
-Each loopback request has a one-second connection timeout and a two-second
-total timeout. With 30 attempts and one-second intervals, the health-probe phase
-has a wall-clock bound of less than 90 seconds. The subshell keeps fail-fast
-options, variables, functions, and traps isolated from the caller.
-
-The Wrangler command validates the Cloudflare bundle only. Cloudflare Worker
-deployment is handled separately by Workers Builds and is not performed by
-GitHub Actions.
-
-## 📡 API Endpoints
-
-Regional and OGC API base URL: `/api/v1`. The health endpoint remains
-`/api/health`.
-
-### Health
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/health` | Process health and dependency-independent liveness |
-
-### Regions
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/regions/provinces` | List 38 provinsi |
-| GET | `/regions/provinces/:kode` | Detail provinsi |
-| GET | `/regions/regencies?province_code=` | List kabupaten by provinsi |
-| GET | `/regions/regencies/:kode` | Detail kabupaten |
-| GET | `/regions/districts?regency_code=` | List kecamatan by kabupaten |
-| GET | `/regions/districts/:kode` | Detail kecamatan |
-| GET | `/regions/villages?district_code=` | List desa by kecamatan |
-| GET | `/regions/villages/:kode` | Detail desa + hierarki lengkap |
-| GET | `/regions/search?q=&level=` | Cari wilayah multi-level |
-
-### Postal Codes
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/postal-codes?village_code=\|postal_code=\|district_code=` | Query kode pos |
-| GET | `/postal-codes/lookup?q=` | Lookup prefix kode pos |
-
-### Boundaries (GeoJSON)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/boundaries/provinces?geometry=true` | Batas provinsi + GeoJSON |
-| GET | `/boundaries/provinces/:kode?geometry=true` | Single provinsi + geometry |
-| GET | `/boundaries/regencies?province_code=&geometry=true` | Batas kabupaten |
-| GET | `/boundaries/regencies/:kode?geometry=true` | Single kabupaten |
-| GET | `/boundaries/districts?regency_code=&geometry=true` | Batas kecamatan |
-| GET | `/boundaries/districts/:kode?geometry=true` | Single kecamatan |
-| GET | `/boundaries/villages?district_code=&geometry=true` | Batas desa |
-| GET | `/boundaries/villages/:kode?geometry=true` | Single desa |
-
-### Reverse Geocode
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/boundaries/reverse?lat=&lng=&level=` | Koordinat → wilayah |
-
-### Status batas desa
-
-Respons desa/kelurahan di REST (`/regions/villages`, `/boundaries/villages`,
-`/boundaries/reverse`), OGC (`villages`) dan MCP (layer `village`) memuat
-`status_batas` dan `edisi_geometri` dari BIG BATASWILAYAH. Sebagian besar
-batas desa BIG berstatus `Batas Indikatif`, bukan batas definitif; jangan
-memakainya sebagai dasar hukum batas. `edisi_geometri` berformat
-`YYYY-MM-DD`. Fitur GeoJSON batas membawa `source` geometri per fitur.
-
-### OGC Services
-
-Empat koleksi tetap tersedia di semua protokol OGC: `provinces`,
-`regencies`, `districts`, dan `villages`.
-
-#### OGC API Features (Core + GeoJSON)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/ogc/features` | Landing page (JSON, atau HTML dengan `f=html`) |
-| GET | `/ogc/features/conformance` | Deklarasi conformance classes |
-| GET | `/ogc/features/api` | Dokumen OpenAPI 3.0 |
-| GET | `/ogc/features/collections` | Daftar 4 koleksi |
-| GET | `/ogc/features/collections/:collectionId` | Metadata satu koleksi |
-| GET | `/ogc/features/collections/:collectionId/items` | FeatureCollection terbatas |
-| GET | `/ogc/features/collections/:collectionId/items/:featureId` | Satu fitur |
-
-Parameter `items`: `bbox` (CRS84: minLon,minLat,maxLon,maxLat), `limit`
-(default 10, maksimum 1.000), `offset`, `properties`, `crs` (hanya CRS84),
-dan `f` (`json`, `geojson`, `html`). Geometri selalu disajikan dalam CRS84
-(lon, lat).
-
-#### WFS 2.0
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/ogc/wfs?SERVICE=WFS&REQUEST=GetCapabilities` | WFS 2.0 Capabilities XML |
-| GET | `/ogc/wfs?SERVICE=WFS&REQUEST=GetFeature&...` | Fitur sebagai GeoJSON atau GML 3.2 |
-| GET | `/ogc/wfs?SERVICE=WFS&REQUEST=DescribeFeatureType&...` | Skema XML per tipe fitur |
-
-`GetFeature` menerima `TYPENAMES` (satu tipe per panggilan), `COUNT` /
-`STARTINDEX` (batas sama: default 10, maksimum 1.000), `BBOX`,
-`SRSNAME` (hanya CRS84 / EPSG:4326), dan `OUTPUTFORMAT`
-(`application/geo+json` atau `application/gml+xml; version=3.2`).
-
-#### WMS 1.3.0
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/ogc/wms?SERVICE=WMS&REQUEST=GetCapabilities` | WMS 1.3.0 Capabilities XML |
-| GET | `/ogc/wms?SERVICE=WMS&REQUEST=GetMap&...` | Render peta raster (PNG/JPEG) |
-| GET | `/ogc/wms?SERVICE=WMS&REQUEST=GetFeatureInfo&...` | Info fitur pada piksel (I/J) |
-
-`GetMap` me-render gambar sungguhan dari PostGIS (bukan placeholder) dengan
-`FORMAT=image/png` atau `image/jpeg`, maksimum 2.048×2.048 piksel
-(4.194.304 piksel total). Urutan sumbu mengikuti WMS 1.3.0: `CRS:84`
-memakai lon,lat sedangkan `EPSG:4326` memakai lat,lon. `GetFeatureInfo`
-memakai indeks piksel `I`/`J` dan predikat `ST_Covers`, sehingga titik yang
-tepat di batas poligon tetap dihitung.
-
-#### Perilaku truthful dan bounded
-
-Semua layanan OGC menolak parameter yang tidak didukung dengan exception
-sesuai standar (`ows:ExceptionReport` untuk WFS, `ServiceExceptionReport`
-untuk WMS, dokumen exception JSON untuk OGC API Features) — tidak ada
-parameter yang diam-diam diabaikan. Khususnya:
-
-- `FILTER` (WFS) ditolak dengan `OperationNotSupported` sampai tata bahasa
-  filter yang aman tersedia.
-- `datetime` ditolak dengan `InvalidParameterValue` karena data tidak
-  memiliki field temporal.
-- `STYLES` selain style `default` ditolak dengan `StyleNotDefined`; layer
-  yang tidak dikenal ditolak dengan `LayerNotDefined`.
-- Kesalahan database tidak pernah bocor ke klien; klien menerima
-  `NoApplicableCode` generik.
-
-Smoke check publik untuk seluruh layanan tersedia di
-`scripts/smoke-public-geospatial.sh`:
-
-```bash
-BASE_URL=http://127.0.0.1:3000 bash scripts/smoke-public-geospatial.sh
-```
-
-Perhatian saat menjalankan smoke terhadap server lokal: middleware me-rewrite
-setiap permintaan `/api/*` ke `WILAYAH_API_ORIGIN` yang default-nya menunjuk
-ke origin API publik, sehingga smoke bisa diam-diam menguji layanan eksternal
-dan melaporkan hasil hijau palsu. Untuk server yang menangani rute API secara
-lokal, atur `WILAYAH_RUNTIME_ROLE=origin`. Nilai yang diizinkan hanya `proxy`
-(default) dan `origin`; nilai eksplisit lain, termasuk nilai kosong, gagal
-dengan kesalahan konfigurasi. Runtime role hanya dibaca dari environment proses,
-bukan dari header request. Origin mode menjalankan `/api/*` secara lokal dan
-tetap me-rewrite `/tiles/*` ke `WILAYAH_TILES_ORIGIN`:
-
-```bash
-WILAYAH_RUNTIME_ROLE=origin DATABASE_URL=... pnpm start
-```
-
-`/api/health` tetap ditangani secara lokal dan tidak bergantung pada peran
-runtime. Cloudflare Worker tidak menetapkan variabel ini dan tetap menggunakan
-peran `proxy`.
-
-### API key dan rate limit
-
-API bisa dipakai tanpa key dengan batas per alamat IP. API key gratis dibuat di
-halaman `/keys` (tanpa akun) dan menaikkan batasnya. Kirim key di header
-`X-API-Key`, atau di parameter `api_key` untuk klien GIS yang tidak bisa
-mengatur header.
+API bisa dipakai tanpa key. Key gratis dibuat di halaman
+[`/keys`](https://wilayah-id-web.gislabs.workers.dev/keys) tanpa akun, lalu
+dikirim lewat header `X-API-Key` atau parameter `api_key`.
 
 | Akses | Umum | Endpoint berat | Harian |
 |-------|------|----------------|--------|
-| Tanpa key (per alamat IP) | 60/menit | 10/menit | tidak ada |
-| API key gratis | 300/menit | 60/menit | 20.000/hari |
-| Key pemilik | 3.000/menit | 3.000/menit | tidak ada |
+| Tanpa key (per IP) | 60/menit | 10/menit | tidak dibatasi |
+| Key gratis | 300/menit | 60/menit | 20.000 |
+| Key pemilik | 3.000/menit | 3.000/menit | tidak dibatasi |
 
-Endpoint berat: WMS `GetMap`, WFS `GetFeature`, OGC API Features `items`, dan
-batas wilayah dengan `geometry=true`. Vector tiles dan `/api/health` tidak
-dibatasi. Respons menyertakan `RateLimit-Limit`, `RateLimit-Remaining`, dan
-`RateLimit-Reset`; bila batas terlampaui server menjawab HTTP 429 dengan
-`Retry-After`. Key yang tidak valid dijawab HTTP 401, tidak diturunkan menjadi
-akses anonim.
+Yang termasuk endpoint berat: WMS `GetMap`, WFS `GetFeature`, OGC `items`, dan
+`geometry=true`. Vector tiles dan health tidak dibatasi. Bila batas terlampaui,
+server menjawab 429 dengan `Retry-After`; key yang tidak valid dijawab 401. Key
+gratis berlaku 365 hari dan hanya ditampilkan sekali.
 
-```bash
-curl -H "X-API-Key: $WILAYAH_API_KEY" \
-  "https://wilayah-id-api.dhanypedia.com/api/v1/regions/provinces"
-```
+## Vector tiles
 
-Key gratis bersifat stateless: server menandatanganinya dengan
-`WILAYAH_KEY_SIGNING_SECRET` dan tidak menyimpannya, sehingga key hanya
-ditampilkan sekali dan berlaku 365 hari. Pembatasan hanya aktif pada peran
-`origin` dengan `WILAYAH_RATE_LIMIT_ENABLED=true`; hitungan disimpan di memori
-proses dan kembali nol saat server restart. Konfigurasi, key pemilik,
-pencabutan key, dan token proxy dijelaskan di
-[`docs/MCP_DEPLOYMENT.md`](docs/MCP_DEPLOYMENT.md).
+| Layer | Zoom | Fitur |
+|-------|------|-------|
+| `provinsi` | 3 sampai 9 | 38 |
+| `kabupaten` | 7 sampai 11 | 514 |
+| `kecamatan` | 10 sampai 12 | 7.282 |
+| `desa` | 12 sampai 14 | 83.529 |
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/keys` | Kebijakan batas yang sedang berlaku |
-| POST | `/api/keys` | Buat API key gratis (`label`, `contact` opsional) |
+Tile berformat MVT tanpa kompresi, dengan CORS terbuka.
 
-### Response Format
+## MCP
+
+Server MCP membuka data ini ke agent LLM (Claude Desktop, Cursor, dan klien
+MCP lain) dengan kosakata spasial generik. Semua akses bersifat read-only, dan
+nama tabel tidak terlihat oleh klien.
+
+| Tool | Fungsi |
+|------|--------|
+| `describe_spatial_service` | Dataset, layer, atribut, operasi, snapshot, dan batas pemakaian |
+| `resolve_spatial_entity` | Nama atau kode ke kandidat wilayah, dengan penanda ambigu |
+| `get_spatial_entity` | Atribut, hierarki, bbox, dan geometri (opsional) |
+| `locate_coordinates` | Wilayah yang memuat suatu koordinat |
+| `relate_spatial_entities` | Topologi, jarak, dan arah antara dua wilayah |
+| `find_related_spatial_entities` | Parent, children, tetangga, within, nearest |
+| `extract_spatial_subset` | Potong wilayah per bbox, GeoJSON, atau wilayah, lalu unduh GeoJSON/GeoPackage |
+
+Ada juga lima tool lama untuk kompatibilitas (`search_regions`,
+`get_region_details`, `reverse_geocode`, `get_top_populated_regions`,
+`get_demographic_summary`). Setiap respons memakai envelope `status`, `data`,
+`meta` dengan snapshot `big-2026-06-12+kepmendagri-2025+dukcapil-2024-s1`,
+CRS, provenance, dan kode error yang stabil.
+
+Endpoint publik butuh key: key gratis dari `/keys` mendapat 120 request dan 10
+unduhan artefak per menit. Contoh konfigurasi klien:
 
 ```json
 {
-  "data": [ ... ],
-  "meta": {
-    "total": 38,
-    "source": "BIG BATASWILAYAH 2026-06-12; names Kepmendagri 2025; population Dukcapil 2024 Semester 1",
-    "snapshot": "big-2026-06-12+kepmendagri-2025+dukcapil-2024-s1",
-    "attribution": "Badan Informasi Geospasial (BIG); Kemendagri; Ditjen Dukcapil Kemendagri"
+  "mcpServers": {
+    "wilayah-id": {
+      "url": "https://wilayah-id-mcp.dhanypedia.com/mcp",
+      "headers": { "X-API-Key": "<key dari /keys>" }
+    }
   }
 }
 ```
 
-## 🗺️ Vector Tiles
+Untuk lokal, jalankan `docker compose up mcp-server` lalu pakai
+`http://127.0.0.1:8000/mcp`. Konfigurasi dan deployment ada di
+[`docs/MCP_DEPLOYMENT.md`](docs/MCP_DEPLOYMENT.md).
 
-4 layer MVT tersedia di `/tiles/{layer}/{z}/{x}/{y}.pbf`:
+## Menjalankan sendiri
 
-| Layer | Zoom Range | Features |
-|-------|-----------|----------|
-| `provinsi` | z3–9 | 38 |
-| `kabupaten` | z7–11 | 514 |
-| `kecamatan` | z10–12 | 7.282 |
-| `desa` | z12–14 | 83.529 |
-
-## 🤖 Model Context Protocol (MCP)
-
-Wilayah-ID menyediakan MCP server yang dapat dihubungkan ke agent berbasis LLM.
-Tujuh tool utama memakai kosakata spasial generik; nama tabel dan struktur
-administrasi Indonesia disembunyikan di belakang adapter PostGIS read-only.
-FastMCP hanya menjadi adapter transport, sedangkan validasi, provenance, dan
-semantik operasi berada di module yang dapat diuji.
-
-**Tool interoperabilitas spasial (v1):**
-
-- `describe_spatial_service`: menemukan dataset, layer, atribut, operasi,
-  snapshot, lisensi, dan limit;
-- `resolve_spatial_entity`: memetakan nama atau kode ke kandidat `FeatureRef`
-  yang terurut dan menandai ambiguitas;
-- `get_spatial_entity`: mengambil atribut, hierarki, bbox, representative point,
-  dan geometri opsional;
-- `locate_coordinates`: mencari feature yang mencakup koordinat dengan kebijakan
-  `covers` atau `strict_contains`;
-- `relate_spatial_entities`: menghitung topology, DE-9IM, jarak meter, dan arah
-  antara dua feature;
-- `find_related_spatial_entities`: mencari parent, children, neighbors, within,
-  contains, intersects, atau nearest;
-- `extract_spatial_subset`: menyeleksi atau memotong feature berdasarkan bbox,
-  GeoJSON, atau `FeatureRef`, kemudian menghasilkan artefak GeoJSON/GeoPackage.
-
-Lima tool lama—`search_regions`, `get_region_details`, `reverse_geocode`,
-`get_top_populated_regions`, dan `get_demographic_summary`—tetap tersedia sebagai
-compatibility wrappers. Tool tersebut bukan kontrak generik untuk adapter baru.
-
-Tool generik mengembalikan envelope `status`, `data`, dan `meta`. Metadata
-mencakup versi tool, dataset, snapshot, CRS, metode, trace ID, latency,
-provenance, serta warnings. Kesalahan memakai kode stabil dan tidak membocorkan
-SQL atau detail koneksi.
-
-Semua query memakai connection pool, transaksi read-only, statement timeout
-5 detik secara default, dan batas hasil. Geometry entity bersifat opt-in dan
-dibatasi berdasarkan jumlah titik. Spatial subset dibatasi maksimal 5.000
-feature secara default; artefak disimpan sementara selama 15 menit, memiliki
-checksum SHA-256, dibatasi 50 MiB, dan diunduh melalui
-`/artifacts/{artifact_id}/{filename}`. GeoJSON AOI dibatasi 1 MiB.
-
-Konfigurasi dapat diubah melalui `MCP_DB_POOL_MIN`, `MCP_DB_POOL_MAX`,
-`MCP_STATEMENT_TIMEOUT_MS`, `MCP_MAX_GEOMETRY_POINTS`,
-`MCP_MAX_SUBSET_FEATURES`, `MCP_ARTIFACT_DIR`,
-`MCP_ARTIFACT_TTL_SECONDS`, `MCP_MAX_AOI_BYTES`,
-`MCP_MAX_ARTIFACT_BYTES`, dan `MCP_PUBLIC_BASE_URL`. GeoPackage membutuhkan GDAL
-`ogr2ogr`, yang sudah disertakan dalam image MCP.
-
-Setiap respons MCP menyebut snapshot
-`big-2026-06-12+kepmendagri-2025+dukcapil-2024-s1`: geometri BIG
-BATASWILAYAH edisi 2026-06-12, nama dan kode wilayah Kepmendagri 2025, dan
-data penduduk Dukcapil 2024 Semester 1. Sumber per komponen tercatat di tabel
-`dataset_snapshot` dan di tabel sumber data di bawah. Baseline eksperimen
-lama (Dukcapil 2024 Semester 1) tetap tercatat di
-`mcp/tests/baseline/data_snapshot.json`.
-
-Untuk menjalankan test kontrak dan service:
+Image web dipublikasikan otomatis ke
+`ghcr.io/dhanyyudi/wilayah-id:latest` setiap ada perubahan di `main`.
+`docker-compose.yml` menjalankan PostGIS, web, dan MCP sekaligus.
 
 ```bash
-cd mcp
-python -m unittest discover -s tests -v
+git clone https://github.com/dhanyyudi/wilayah-id.git
+cd wilayah-id
+cp .env.example .env.local     # isi DATABASE_URL
+pnpm install
+pnpm dev                       # http://localhost:3000
 ```
 
-Tes adapter PostGIS aktif ketika `TEST_DATABASE_URL` menunjuk ke schema fixture.
-CI membuat schema disposable tersebut, menguji kasus ambiguous name, boundary
-point, hierarchy, adjacency, distance, invalid geometry, dan clipped subset,
-lalu membangun image Docker.
+Database bisa diisi dengan dua cara:
 
-Docker Compose lokal menjalankan Streamable HTTP pada
-`http://127.0.0.1:8000/mcp`. Port hanya di-bind ke loopback. Eksekusi langsung
-`python mcp/server.py` tetap memakai `stdio` secara default. Konfigurasi runtime
-tersedia melalui `MCP_TRANSPORT`, `MCP_HOST`, `MCP_PORT`,
-`MCP_ALLOWED_HOSTS`, dan `MCP_ALLOWED_ORIGINS`.
+- **Dump release.** Release yang ada sekarang masih memuat data Dukcapil 2024
+  dari sebelum migrasi. Dump BIG 2026 akan diterbitkan setelah syarat lisensi
+  BIG dipastikan.
+- **Bangun sendiri dari BIG.** Ikuti langkah di
+  [`docs/BIG_2026_MIGRATION.md`](docs/BIG_2026_MIGRATION.md):
+  `etl/big_boundaries.py prepare`, `scripts/load-big-stage.sh`, lalu
+  `sql/migrations/20261015_big2026_boundaries.sql`. Tiles dibuat dengan
+  `etl/generate_tiles_dukcapil.py` (butuh tippecanoe dan mb-util).
 
-### Public MCP authentication
+Saat menguji server lokal, set `WILAYAH_RUNTIME_ROLE=origin` supaya `/api/*`
+dijawab oleh database lokal. Tanpa itu, request diteruskan ke API publik.
 
-Public MCP uses the `X-API-Key` request header. `/health` remains anonymous,
-while `/mcp` and `/artifacts/*` require a valid key. Every response carries a
-`Cache-Control` value containing `no-store`; clients must not cache health,
-tool, or artifact responses.
-
-The REST API, OGC API Features, WFS, WMS, and vector tiles remain usable
-without a key; only public MCP and `/artifacts/*` require one. MCP accepts the
-owner keys listed in `MCP_API_KEYS_SHA256` and, when
-`WILAYAH_KEY_SIGNING_SECRET` is set, the free keys created on the `/keys`
-page. An issued key gets 120 MCP requests and 10 artifact downloads per
-minute; owner keys only meet a 3,000 per minute safety cap.
-
-The public deployment override accepts only `MCP_API_KEYS_SHA256`, never a raw
-key. Keep the raw key in a password manager and the client environment. During
-rotation, deploy two comma-separated SHA-256 hashes for the overlap period,
-move clients to the new raw key, then remove the old hash. Never commit raw
-keys or publish database ports.
-
-The MCP service remains private behind an existing managed tunnel or
-authenticated reverse proxy. The homeserver override resets the loopback port
-inherited from the local Compose file with `ports: !reset []` and does not
-include a `cloudflared` container. Validate an activated edge
-from a trusted client with:
+## Pengembangan
 
 ```bash
-MCP_BASE_URL=https://public-mcp.example.invalid \
-MCP_API_KEY=... \
-  python scripts/check-mcp-edge.py
+pnpm lint && pnpm typecheck && pnpm test && pnpm build   # web
+pnpm build:cf && pnpm exec wrangler deploy --dry-run      # bundle Cloudflare
+cd mcp && python -m unittest discover -s tests -v          # MCP
+python -m unittest discover -s etl/tests -v                # ETL
+BASE_URL=http://127.0.0.1:3000 bash scripts/smoke-public-geospatial.sh
 ```
 
-The client checks authentication, no-cache responses for artifacts and MCP
-traffic, artifact protection, and the seven generic plus five compatibility
-tools without printing its key or request headers. See
-[`docs/MCP_DEPLOYMENT.md`](docs/MCP_DEPLOYMENT.md) for the static Compose
-validation and deployment constraints.
-
-### Cara menghubungkan di Claude Desktop / Cursor:
-
-Gunakan URL Streamable HTTP yang sesuai dengan lingkungan klien. Untuk
-pengembangan lokal: `http://127.0.0.1:8000/mcp`. Deployment homeserver dan
-gerbang publik dijelaskan di
-[`docs/MCP_DEPLOYMENT.md`](docs/MCP_DEPLOYMENT.md). Endpoint publik tidak boleh
-diaktifkan tanpa autentikasi atau pembatasan trafik yang sesuai.
-
-## 🛠️ Tech Stack
-
-| Component | Technology |
-|-----------|-----------|
-| Framework | Next.js 16.1.6 (App Router) |
-| Map Engine | MapLibre GL JS v5 |
-| Map UI | [mapcn](https://mapcn.dev) (shadcn/ui compatible) |
-| Database | PostgreSQL 17 + PostGIS 3.5 (Neon) |
-| OGC Services | WMS 1.3.0 + WFS 2.0 |
-| Tile Generation | Tippecanoe + mb-util |
-| ETL | Python + GeoPandas |
-| Styling | Tailwind CSS v4 + shadcn/ui |
-| Deployment | Cloudflare Workers (OpenNext) untuk web; homeserver di belakang Cloudflare Tunnel untuk API, tiles, dan MCP |
-
-## 📊 Data Sources
-
-| Dataset | Source | Records |
-|---------|--------|---------|
-| Boundary geometry | [Badan Informasi Geospasial (BIG), BATASWILAYAH](https://geoservices.big.go.id/rbi/rest/services/BATASWILAYAH) edition 2026-06-12. Desa and kecamatan at 1:10.000; kab/kota and provinsi are dissolved from the kecamatan coverage (see `docs/BIG_2026_MIGRATION.md`) | 38 + 514 + 7.282 + 83.529 |
-| Population, households, official area | [Ditjen Dukcapil Kemendagri](https://gis.dukcapil.kemendagri.go.id/peta/) 2024 Semester 1, joined by region code | |
-| Region codes | [region-id v1.0.2](https://github.com/lokabisa-oss/region-id/releases/tag/v1.0.2) (Kepmendagri 2025), with local name fixes in `data-region-id/name-corrections.csv` | 91.248 |
-| Postal codes | [postal-code-id](https://github.com/nicnocquee/postal-code-id) | 77.721 |
-
-## 📁 Project Structure
+| Bagian | Teknologi |
+|--------|-----------|
+| Web | Next.js 16 (App Router), React 19, Tailwind CSS v4, shadcn/ui |
+| Peta | MapLibre GL JS v5 via [mapcn](https://mapcn.dev) |
+| Database | PostGIS 3.5 (PostgreSQL 16 di produksi, 17 di compose lokal) |
+| MCP | Python 3.11, FastMCP, GDAL untuk GeoPackage |
+| ETL | Python, GeoPandas, Shapely 2.1 (`coverage_simplify`) |
+| Hosting | Web di Cloudflare Workers (OpenNext); API, tiles, dan MCP di homeserver lewat Cloudflare Tunnel |
 
 ```
-├── src/
-│   ├── app/
-│   │   ├── api/v1/          # 20 REST API routes
-│   │   │   ├── regions/     # Provinces, regencies, districts, villages, search
-│   │   │   ├── postal-codes/# Postal code queries
-│   │   │   └── boundaries/  # GeoJSON boundaries + reverse geocode
-│   │   ├── page.tsx         # Fullscreen webmap (mapcn)
-│   │   └── layout.tsx       # ThemeProvider, metadata
-│   ├── components/
-│   │   ├── map/             # Map components (VectorLayerManager, InfoPanel, etc.)
-│   │   └── ui/              # shadcn/ui + mapcn components
-│   └── lib/                 # DB connection, validation, API response helpers
-├── etl/
-│   ├── import_all.py        # SHP → PostGIS ETL
-│   └── generate_tiles.py    # PostGIS → MVT tiles
-├── public/tiles/            # Generated .pbf tiles (gitignored)
-├── vercel.json              # CORS + cache headers
-└── data-*/                  # Source data files
+src/app/            halaman (peta, docs, keys, self-host) dan route API /api/v1
+src/lib/            akses database, OGC, validasi, provenance, API key
+src/components/     komponen peta dan UI
+mcp/                server MCP (FastMCP) dan adapter PostGIS
+etl/                persiapan data BIG, nama wilayah, kode pos, tiles
+sql/                migrasi dan update data
+scripts/            smoke test, staging, dan release data
+deploy/             konfigurasi Nginx tiles dan override homeserver
+docs/               migrasi BIG 2026 dan deployment MCP
 ```
 
-## 📄 License
+## Lisensi
 
-Kode: MIT. Geometri batas bersumber dari Badan Informasi Geospasial (BIG),
-BATASWILAYAH edisi 2026-06-12, dan tunduk pada ketentuan BIG; cantumkan
-atribusi BIG saat memakai atau mendistribusikan ulang geometri. Nama wilayah:
-Kepmendagri 2025. Data penduduk: Ditjen Dukcapil Kemendagri 2024 Semester 1.
+Kode berlisensi MIT. Geometri batas bersumber dari Badan Informasi Geospasial
+(BIG) dan tunduk pada ketentuan BIG; cantumkan atribusi BIG saat memakai atau
+mendistribusikan ulang geometri. Nama wilayah dari Kepmendagri 2025, data
+penduduk dari Ditjen Dukcapil Kemendagri 2024 Semester 1.
