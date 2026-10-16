@@ -85,6 +85,13 @@ Diterapkan oleh `etl/big_boundaries.py prepare`.
 7. **Tipe.** `kabupaten.tipe` dari region-id (`regency`/`city`) atau `TIPADM`
    BIG. `desa.tipe` menjadi `DESA` atau `KELURAHAN` dari region-id atau
    `TIPADM` BIG; sekarang semua baris bertipe `DESA`.
+8. **Grid output.** REST, OGC, MCP, dan ekspor tiles menulis GeoJSON dengan
+   6 desimal. Semua geometri disimpan pada grid 0,000001°
+   (`set_precision` mode `valid_output`), sehingga yang disimpan sama
+   dengan yang disajikan dan tetap valid. Tanpa langkah ini, 10 provinsi,
+   22 kab/kota, 42 kecamatan, dan 111 desa menjadi tidak valid setelah
+   dibulatkan. Data produksi yang dimigrasikan 2026-10-16 diperbaiki dengan
+   `sql/updates/2026-10-16-geometry-precision.sql`.
 
 ## Hasil uji di staging
 

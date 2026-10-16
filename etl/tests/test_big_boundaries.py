@@ -116,5 +116,35 @@ class GeometrySteps(unittest.TestCase):
         self.assertIs(merged["1102"], c)
 
 
+@unittest.skipUnless(HAS_COVERAGE, "needs Shapely 2.1+ on GEOS 3.12+ (etl/requirements-big.txt)")
+class OutputGrid(unittest.TestCase):
+    def test_output_stays_valid_when_written_with_six_decimals(self):
+        from big_boundaries import OUTPUT_GRID, snap_to_output_grid
+
+        # The hole sits 3e-7 deg above the shell: valid as stored, but rounding
+        # to 6 decimals puts it on the shell edge.
+        polygon = wkt.loads(
+            "POLYGON((0 0, 1 0, 1 1, 0 1, 0 0),"
+            " (0.2 0.0000003, 0.2 0.5, 0.8 0.5, 0.8 0.0000003, 0.2 0.0000003))"
+        )
+        self.assertTrue(polygon.is_valid)
+        naive = shapely.set_precision(polygon, OUTPUT_GRID, mode="pointwise")
+        self.assertFalse(naive.is_valid)
+
+        snapped = snap_to_output_grid(polygon)
+        self.assertEqual(snapped.geom_type, "MultiPolygon")
+        self.assertTrue(snapped.is_valid)
+        rounded = shapely.from_geojson(shapely.to_geojson(snapped, indent=None))
+        self.assertTrue(shapely.set_precision(rounded, OUTPUT_GRID, mode="pointwise").is_valid)
+        self.assertTrue(shapely.equals(shapely.set_precision(rounded, OUTPUT_GRID, mode="pointwise"), snapped))
+
+    def test_collapsed_geometry_becomes_none(self):
+        from big_boundaries import snap_to_output_grid
+
+        sliver = wkt.loads("POLYGON((0 0, 0.0000002 0, 0.0000002 0.0000002, 0 0.0000002, 0 0))")
+        self.assertIsNone(snap_to_output_grid(sliver))
+        self.assertIsNone(snap_to_output_grid(None))
+
+
 if __name__ == "__main__":
     unittest.main()

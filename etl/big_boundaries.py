@@ -36,6 +36,11 @@ LEVELS = {
 }
 KABKOTA = {"layer": "kabkota", "tolerance": 0.0005}
 PROVINCE_TOLERANCE = 0.001
+# REST, OGC, MCP and the tile export write GeoJSON with 6 decimals. BIG keeps
+# 7 or more, so vertices closer than 1e-6 deg can merge on output and leave
+# self-intersecting or collapsed rings. Snapping every output geometry to the
+# same grid here keeps what is stored identical to what is served.
+OUTPUT_GRID = 0.000001
 SOURCE_LABEL = "BIG BATASWILAYAH"
 BIG_COLUMNS = ["NAMOBJ", "REMARK", "METADATA", "KDPPUM", "KDPKAB", "KDCPUM", "KDEPUM",
                "KDEBPS", "UUPP", "Status", "TIPADM", "geometry"]
@@ -170,6 +175,15 @@ def union_groups(keys, geoms):
         parts = [p for p in shapely.get_parts(union) if p.geom_type == "Polygon"]
         merged[key] = shapely.MultiPolygon(parts)
     return merged
+
+
+def snap_to_output_grid(geom):
+    """Valid MultiPolygon on the OUTPUT_GRID, or None when nothing is left."""
+    import shapely
+
+    if geom is None or geom.is_empty:
+        return None
+    return as_multi(shapely.set_precision(geom, OUTPUT_GRID, mode="valid_output"))
 
 
 def as_multi(geom):
@@ -465,6 +479,7 @@ def finalize(table: str, frame, snapshot_edition: str):
     }[table]
     extra = ["nama_big", "sumber_nama"] if "nama_big" in frame else ["sumber_nama"]
     frame = frame[keep + extra + ["sumber_geometri", "edisi_geometri", "geometry"]]
+    frame = frame.set_geometry([snap_to_output_grid(g) for g in frame.geometry], crs=4326)
     return as_text_columns(frame)
 
 
@@ -539,7 +554,9 @@ def cmd_prepare(args) -> int:
         final.to_parquet(path, compression="zstd", index=False)
         outputs[path.name] = sha256(path)
     if uncoded_parts:
-        uncoded = as_text_columns(pd.concat(uncoded_parts, ignore_index=True))
+        uncoded = pd.concat(uncoded_parts, ignore_index=True)
+        uncoded = uncoded.set_geometry([snap_to_output_grid(g) for g in uncoded.geometry], crs=4326)
+        uncoded = as_text_columns(uncoded[uncoded.geometry.notna()])
         path = out_dir / "area_tidak_terdefinisi.parquet"
         uncoded.to_parquet(path, compression="zstd", index=False)
         outputs[path.name] = sha256(path)
@@ -581,6 +598,7 @@ def cmd_prepare(args) -> int:
                               "kabupaten": KABKOTA["tolerance"], "provinsi": PROVINCE_TOLERANCE},
             "make_valid": "shapely make_valid method=structure, polygon parts only",
             "simplify": "shapely coverage_simplify per level, simplify_boundary=True",
+            "output_grid_deg": OUTPUT_GRID,
             "kabupaten": "union of simplified BIG kecamatan per kode_kab, simplified again",
             "provinsi": "union of kab/kota per kode_prov, simplified again",
         },
