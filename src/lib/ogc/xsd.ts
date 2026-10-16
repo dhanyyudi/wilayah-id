@@ -5,13 +5,13 @@
  * shared collection catalog, so the schema can never drift from the data
  * the repository actually serves. Column types follow the PostGIS schema:
  * identifier and name columns are strings, demographic counts are integers,
- * and area/density columns are doubles. Geometry is declared with the
- * generic gml:GeometryPropertyType because the GML writer emits whatever
+ * area/density columns are doubles, and date columns are xs:date. Geometry
+ * is declared with the generic gml:GeometryPropertyType because the GML writer emits whatever
  * geometry type each stored feature carries.
  */
 
 import { create } from "xmlbuilder2";
-import { COLLECTION_IDS, findCollection } from "./catalog";
+import { COLLECTION_IDS, DATE_COLUMNS, findCollection } from "./catalog";
 import { invalidParameterValue } from "./errors";
 
 export const WFS_NAMESPACE = "http://wilayah.id/wfs";
@@ -21,6 +21,9 @@ const DOUBLE_COLUMNS = new Set(["area_km2", "kepadatan", "luas_wilayah"]);
 function xsdTypeForColumn(column: string): string {
   if (DOUBLE_COLUMNS.has(column)) {
     return "xs:double";
+  }
+  if (DATE_COLUMNS.has(column)) {
+    return "xs:date";
   }
   if (column.startsWith("jumlah_")) {
     return "xs:integer";

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { getDb } from "@/lib/db";
 import { apiSuccess, apiGeoJSON, apiNotFound, apiError, apiServerError } from "@/lib/api-response";
+import { GEOMETRY_SOURCE } from "@/lib/provenance";
 import { validateKode } from "@/lib/validation";
 
 /**
@@ -56,7 +57,7 @@ export async function GET(
           jumlah_kec: r.jumlah_kec,
           jumlah_desa: r.jumlah_desa,
           jumlah_kel: r.jumlah_kel,
-          source: "Dukcapil 2024 via batas-administrasi-indonesia",
+          source: GEOMETRY_SOURCE,
         },
         geometry: r.geometry,
       });

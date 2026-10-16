@@ -12,6 +12,7 @@ import { getDb, type DbQueryFunction } from "../db";
 import {
   COLLECTION_IDS,
   findCollection,
+  selectColumnSql,
   type CollectionDefinition,
 } from "./catalog";
 import {
@@ -145,7 +146,7 @@ export function createOgcRepository(db?: DbQueryFunction): OgcRepository {
       validatePaging(limit, offset);
 
       const columns = resolveProperties(definition, query.properties);
-      const selectList = columns.map(quoteIdentifier).join(", ");
+      const selectList = columns.map(selectColumnSql).join(", ");
       const geometrySelect = `ST_AsGeoJSON(${quoteIdentifier(definition.geometryColumn)}, 6)::json AS geometry`;
       const table = quoteIdentifier(definition.table);
 
@@ -193,7 +194,7 @@ export function createOgcRepository(db?: DbQueryFunction): OgcRepository {
     async getFeature(id: string, featureId: string): Promise<GeoJsonFeature> {
       const definition = requireCollection(id);
       const selectList = definition.propertyColumns
-        .map(quoteIdentifier)
+        .map(selectColumnSql)
         .join(", ");
       const geometrySelect = `ST_AsGeoJSON(${quoteIdentifier(definition.geometryColumn)}, 6)::json AS geometry`;
       const text =

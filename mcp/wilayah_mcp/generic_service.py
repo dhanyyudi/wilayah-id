@@ -18,17 +18,12 @@ from .errors import (
     UnsupportedOperationError,
 )
 from .models import AreaOfInterest, FeatureRef, ProvenanceRecord, SpatialResult
+from .provenance import DATA_SOURCES
 from .repository import SpatialRepository
 
 PROVENANCE = [
-    ProvenanceRecord(
-        source="Ditjen Dukcapil Kemendagri administrative boundaries",
-        snapshot="2024-semester-1",
-    ),
-    ProvenanceRecord(
-        source="Kepmendagri-derived region codes",
-        snapshot="2025",
-    ),
+    ProvenanceRecord(source=source["name"], snapshot=source["snapshot"])
+    for source in DATA_SOURCES
 ]
 RELATIONS = {
     "contains",

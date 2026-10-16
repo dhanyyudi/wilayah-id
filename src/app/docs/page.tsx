@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Play, Copy, ArrowLeft, Globe, MapPin, Hash, Moon, Sun, Github, ChevronRight, ChevronDown } from "lucide-react";
 import { useTheme } from "next-themes";
+import { DATA_SOURCES } from "@/lib/provenance";
 
 /* ── Endpoint definitions ─────────────────────────── */
 const ENDPOINT_GROUPS = [
@@ -274,7 +275,10 @@ export default function DocsPage() {
               <h4 className="font-semibold text-sm">Data Sources</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
-                  <a href="https://gis.dukcapil.kemendagri.go.id/peta/" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">Batas Administrasi (Kemendagri 2024)</a>
+                  <a href={DATA_SOURCES.geometry.url} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">Batas Wilayah (BIG 2026)</a>
+                </li>
+                <li>
+                  <a href={DATA_SOURCES.demographics.url} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">Data Penduduk (Dukcapil 2024)</a>
                 </li>
                 <li>
                   <a href="https://github.com/lokabisa-oss/region-id" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">Kode Wilayah</a>

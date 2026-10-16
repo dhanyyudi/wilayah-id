@@ -515,8 +515,9 @@ When helping users:
 5. Legacy tools remain available only for compatibility.
 
 Important context:
-- Boundary geometry is based on the Dukcapil 2024 Semester 1 snapshot.
-- Region codes are reconciled with the Kepmendagri 2025-derived dataset.
+- Boundary geometry comes from Badan Informasi Geospasial (BIG) BATASWILAYAH, edition 2026-06-12.
+- Region names and codes follow Kepmendagri 2025; population figures come from Dukcapil 2024 Semester 1.
+- Village `status_batas` tells whether a boundary is definitive or only indicative; most are indicative.
 - The hierarchy is Provinsi (2 digits), Kabupaten/Kota (4), Kecamatan (6), and Desa/Kelurahan (10).
 - The configured database role is read-only; do not attempt data modification.
 """

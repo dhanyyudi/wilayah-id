@@ -73,7 +73,10 @@ CREATE TABLE desa (
   jumlah_penduduk integer,
   pulau varchar,
   jangkauan varchar,
-  updated_at timestamp DEFAULT now()
+  updated_at timestamp DEFAULT now(),
+  sumber_geometri text,
+  edisi_geometri date,
+  status_batas varchar(30)
 );
 
 CREATE TABLE postal_code (
@@ -149,21 +152,22 @@ INSERT INTO kecamatan (
   );
 
 INSERT INTO desa (
-  kode_desa, kode_kec, nama_desa, tipe, geom, jumlah_penduduk
+  kode_desa, kode_kec, nama_desa, tipe, geom, jumlah_penduduk,
+  sumber_geometri, edisi_geometri, status_batas
 ) VALUES
   (
     '1001010001', '100101', 'ALPHA VILLAGE', 'DESA',
     ST_Multi(ST_GeomFromText(
       'POLYGON((0 0,1 0,1 1,0 1,0 0))', 4326
     )),
-    10
+    10, 'BIG BATASWILAYAH 2026-06-12', '2026-06-12', 'Batas Indikatif'
   ),
   (
     '1001010002', '100101', 'BOUNDARY VILLAGE', 'DESA',
     ST_Multi(ST_GeomFromText(
       'POLYGON((0 1,1 1,1 2,0 2,0 1))', 4326
     )),
-    20
+    20, 'BIG BATASWILAYAH 2026-06-12', '2026-06-12', 'Batas Definitif'
   );
 
 INSERT INTO postal_code (kode_desa, kode_pos, status)

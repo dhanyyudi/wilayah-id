@@ -75,7 +75,10 @@ CREATE TABLE ogc_test.desa (
   jumlah_penduduk integer,
   pulau varchar,
   jangkauan varchar,
-  updated_at timestamp DEFAULT now()
+  updated_at timestamp DEFAULT now(),
+  sumber_geometri text,
+  edisi_geometri date,
+  status_batas varchar(30)
 );
 
 CREATE INDEX idx_ogc_test_provinsi_geom ON ogc_test.provinsi USING gist (geom);
@@ -111,6 +114,9 @@ INSERT INTO ogc_test.kecamatan (kode_kec, kode_kab, nama_kecamatan, geom) VALUES
 
 -- The two villages share the edge y=1: the point (0.5, 1) is a boundary
 -- point that ST_Covers must count while ST_Contains would miss it.
-INSERT INTO ogc_test.desa (kode_desa, kode_kec, nama_desa, tipe, geom, jumlah_penduduk) VALUES
-  ('1001010001', '100101', 'ALPHA VILLAGE', 'DESA', ST_Multi(ST_GeomFromText('POLYGON((0 0,1 0,1 1,0 1,0 0))', 4326)), 10),
-  ('1001010002', '100101', 'BOUNDARY VILLAGE', 'DESA', ST_Multi(ST_GeomFromText('POLYGON((0 1,1 1,1 2,0 2,0 1))', 4326)), 20);
+INSERT INTO ogc_test.desa (kode_desa, kode_kec, nama_desa, tipe, geom, jumlah_penduduk,
+                           sumber_geometri, edisi_geometri, status_batas) VALUES
+  ('1001010001', '100101', 'ALPHA VILLAGE', 'DESA', ST_Multi(ST_GeomFromText('POLYGON((0 0,1 0,1 1,0 1,0 0))', 4326)), 10,
+   'BIG BATASWILAYAH 2026-06-12', '2026-06-12', 'Batas Indikatif'),
+  ('1001010002', '100101', 'BOUNDARY VILLAGE', 'DESA', ST_Multi(ST_GeomFromText('POLYGON((0 1,1 1,1 2,0 2,0 1))', 4326)), 20,
+   'BIG BATASWILAYAH 2026-06-12', '2026-06-12', 'Batas Definitif');

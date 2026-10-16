@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   metadataBase: getPublicOrigins().site,
   title: "wilayah-id — Batas Administrasi Indonesia",
   description:
-    "Peta interaktif batas administrasi Indonesia: 38 provinsi, 514 kabupaten/kota, 7.285 kecamatan, 83.762 desa/kelurahan. API REST gratis & open source.",
+    "Peta interaktif batas administrasi Indonesia: 38 provinsi, 514 kabupaten/kota, 7.282 kecamatan, 83.529 desa/kelurahan. API REST gratis & open source.",
   keywords: [
     "batas administrasi indonesia",
     "peta indonesia",

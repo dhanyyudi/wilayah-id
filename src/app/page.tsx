@@ -23,6 +23,7 @@ import Link from "next/link";
 import { TechStackMarquee } from "@/components/tech-stack-marquee";
 import { SearchAnimation } from "@/components/search-animation";
 import { getAbsolutePublicUrl } from "@/lib/public-config";
+import { DATA_SOURCES } from "@/lib/provenance";
 
 const publicClientEnvironment = {
   NODE_ENV: process.env.NODE_ENV,
@@ -638,9 +639,15 @@ export default function HomePage() {
               <h4 className="font-semibold text-sm">Data Sources</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
-                  <a href="https://gis.dukcapil.kemendagri.go.id/peta/" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors flex items-center gap-1.5">
+                  <a href={DATA_SOURCES.geometry.url} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors flex items-center gap-1.5">
                     <Database className="w-3.5 h-3.5" />
-                    Batas Administrasi (Kemendagri 2024)
+                    Batas Wilayah (BIG 2026)
+                  </a>
+                </li>
+                <li>
+                  <a href={DATA_SOURCES.demographics.url} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors flex items-center gap-1.5">
+                    <Database className="w-3.5 h-3.5" />
+                    Data Penduduk (Dukcapil 2024)
                   </a>
                 </li>
                 <li>

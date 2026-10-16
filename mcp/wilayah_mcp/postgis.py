@@ -15,6 +15,7 @@ from psycopg2.pool import ThreadedConnectionPool
 
 from .errors import RepositoryError
 from .models import FeatureRef
+from .provenance import ATTRIBUTION, DATA_SOURCES, DATASET_SNAPSHOT
 
 SEARCH_SQL = """
 (
@@ -243,6 +244,8 @@ LAYER_SPECS = {
             "jumlah_penduduk",
             "pulau",
             "jangkauan",
+            "status_batas",
+            "edisi_geometri",
         ),
     ),
 }
@@ -527,20 +530,9 @@ class PostgisSpatialRepository:
                     "dataset-independent spatial interface."
                 ),
             },
-            "snapshot": "dukcapil-2024-s1+kepmendagri-2025",
+            "snapshot": DATASET_SNAPSHOT,
             "crs": "EPSG:4326",
-            "data_sources": [
-                {
-                    "name": "Ditjen Dukcapil Kemendagri administrative boundaries",
-                    "snapshot": "2024-semester-1",
-                    "role": "geometry",
-                },
-                {
-                    "name": "Kepmendagri-derived region codes",
-                    "snapshot": "2025",
-                    "role": "identifiers-and-hierarchy",
-                },
-            ],
+            "data_sources": [dict(source) for source in DATA_SOURCES],
             "license": {
                 "status": "verification_required",
                 "note": (
@@ -548,9 +540,7 @@ class PostgisSpatialRepository:
                     "download artifacts."
                 ),
             },
-            "attribution": (
-                "Ditjen Dukcapil Kemendagri; Kepmendagri-derived region codes"
-            ),
+            "attribution": ATTRIBUTION,
             "layers": layers,
             "supported_relations": [
                 "contains",
@@ -565,8 +555,8 @@ class PostgisSpatialRepository:
             "supported_subset_formats": ["geojson", "geopackage"],
             "warnings": [
                 (
-                    "Geometry and region-code snapshots require version "
-                    "reconciliation before benchmark ground truth is finalized."
+                    "Most village boundaries are BIG 'Batas Indikatif', not "
+                    "definitive; check status_batas before legal use."
                 ),
                 "Source licensing terms must be verified before redistribution.",
             ],

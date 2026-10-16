@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { getDb } from "@/lib/db";
 import { apiSuccess, apiError, apiServerError } from "@/lib/api-response";
+import { REGION_META } from "@/lib/provenance";
 import { validateKode } from "@/lib/validation";
 
 /**
@@ -26,7 +27,8 @@ export async function GET(request: NextRequest) {
     const sql = getDb();
     const rows = await sql`
       SELECT kode_desa, kode_kec, nama_desa, tipe,
-             jumlah_penduduk, pulau, jangkauan, area_km2
+             jumlah_penduduk, pulau, jangkauan, area_km2,
+             status_batas, to_char(edisi_geometri, 'YYYY-MM-DD') AS edisi_geometri
       FROM desa
       WHERE kode_kec = ${districtCode}
       ORDER BY kode_desa
@@ -34,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     return apiSuccess(rows, {
       total: rows.length,
-      source: "wilayah-id v2.0.0 (Dukcapil 2024)",
+      ...REGION_META,
     });
   } catch (error) {
     console.error("GET /api/v1/regions/villages error:", error);
