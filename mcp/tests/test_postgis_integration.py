@@ -73,6 +73,8 @@ class PostgisSpatialRepositoryIntegrationTests(unittest.TestCase):
             ["province", "regency", "district"],
         )
         self.assertEqual(row["parent_feature_id"], "100101")
+        self.assertEqual(row["properties"]["status_batas"], "Batas Indikatif")
+        self.assertEqual(row["properties"]["edisi_geometri"], "2026-06-12")
 
     def test_boundary_location_distinguishes_covers(self) -> None:
         covers = self.repository.locate_coordinates(
@@ -172,6 +174,26 @@ class PostgisSpatialRepositoryIntegrationTests(unittest.TestCase):
         self.assertEqual(
             subset["feature_collection"]["features"][0]["type"],
             "Feature",
+        )
+        status_subset = self.repository.extract_spatial_subset(
+            layer="village",
+            aoi={
+                "kind": "bbox",
+                "bbox": [0.1, 0.1, 0.9, 0.9],
+                "buffer_m": 0,
+            },
+            predicate="intersects",
+            clip=False,
+            attributes=["kode_desa", "status_batas", "edisi_geometri"],
+            limit=10,
+        )
+        self.assertEqual(
+            status_subset["feature_collection"]["features"][0]["properties"],
+            {
+                "kode_desa": "1001010001",
+                "status_batas": "Batas Indikatif",
+                "edisi_geometri": "2026-06-12",
+            },
         )
 
 

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { getDb } from "@/lib/db";
 import { apiSuccess, apiError, apiServerError } from "@/lib/api-response";
+import { POSTAL_CODE_SOURCE } from "@/lib/provenance";
 
 /**
  * GET /api/v1/postal-codes/lookup?q=23773
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
 
     return apiSuccess(rows, {
       total: rows.length,
-      source: "postal-code-id v2026Q1 (lokabisa-oss)",
+      source: POSTAL_CODE_SOURCE,
     });
   } catch (error) {
     console.error("GET /api/v1/postal-codes/lookup error:", error);

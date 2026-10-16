@@ -90,6 +90,7 @@ export async function GET(request: NextRequest) {
       const rows = await sql`
         SELECT
           d.kode_desa, d.kode_kec, d.nama_desa, d.tipe,
+          d.status_batas, to_char(d.edisi_geometri, 'YYYY-MM-DD') AS edisi_geometri,
           pc.kode_pos
         FROM desa d
         LEFT JOIN postal_code pc ON d.kode_desa = pc.kode_desa

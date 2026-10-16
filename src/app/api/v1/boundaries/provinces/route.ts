@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { getDb } from "@/lib/db";
 import { apiSuccess, apiGeoJSON, apiServerError } from "@/lib/api-response";
+import { GEOMETRY_SOURCE, REGION_META } from "@/lib/provenance";
 
 /**
  * GET /api/v1/boundaries/provinces
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
           jumlah_kec: r.jumlah_kec,
           jumlah_desa: r.jumlah_desa,
           jumlah_kel: r.jumlah_kel,
-          source: "Dukcapil 2024 via batas-administrasi-indonesia",
+          source: GEOMETRY_SOURCE,
         },
         geometry: r.geometry,
       }));
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
 
     return apiSuccess(rows, {
       total: rows.length,
-      source: "Dukcapil 2024 via batas-administrasi-indonesia",
+      ...REGION_META,
     });
   } catch (error) {
     console.error("GET /api/v1/boundaries/provinces error:", error);

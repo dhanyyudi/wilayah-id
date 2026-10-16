@@ -134,6 +134,14 @@ describe.skipIf(!OGC_TEST_DATABASE_URL)(
       expect(body.numberMatched).toBe(2);
     });
 
+    it("returns village boundary status and a plain edition date", async () => {
+      const response = await item("villages", "1001010001");
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.properties.status_batas).toBe("Batas Indikatif");
+      expect(body.properties.edisi_geometri).toBe("2026-06-12");
+    });
+
     it("returns 404 NotFound for an unknown collection", async () => {
       const response = await items("", "islands");
       expect(response.status).toBe(404);

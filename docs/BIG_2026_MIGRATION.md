@@ -213,8 +213,12 @@ release ini diunduh 2026-10-03 dan berisi 541, 7.432, dan 84.503 fitur.
    index yang sama, isi dari staging plus atribut penduduk dari arsip.
 5. **Tiles.** Bangun ulang vector tiles dari tabel baru ke direktori baru,
    lalu tukar direktori yang dilayani.
-6. **Kode.** Perbarui string sumber dan snapshot di REST, OGC, MCP, halaman
-   docs, dan README (`dukcapil-2024-s1` menjadi `big-2026-06-12`).
+6. **Kode.** Rilis cabang `feat/big-2026-provenance`: string sumber terpusat
+   di `src/lib/provenance.ts` dan `mcp/wilayah_mcp/provenance.py`, snapshot
+   `big-2026-06-12+kepmendagri-2025+dukcapil-2024-s1`, serta `status_batas`
+   dan `edisi_geometri` di respons desa REST, OGC, dan MCP. Kode ini membaca
+   kolom baru, jadi baru boleh dirilis setelah swap; sebelum swap, rute desa
+   akan gagal dengan 500.
 7. **Uji publik.** Smoke suite 26 cek, MCP acceptance, dan contoh
    reverse geocoding pada titik di desa yang berubah lebih dari 20%.
 8. **Rollback.** Kembalikan tabel dari `archive_dukcapil2024` dan direktori

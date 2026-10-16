@@ -190,6 +190,23 @@ describe("OgcRepository listFeatures", () => {
     expect(select.text).not.toContain('"jumlah_penduduk"');
   });
 
+  it("formats village date columns in SQL", async () => {
+    const { db, queries } = createFakeDb((text) =>
+      text.includes("COUNT") ? [{ matched: 0 }] : [],
+    );
+    const repo = createOgcRepository(db);
+
+    await repo.listFeatures("villages", {
+      properties: ["status_batas", "edisi_geometri"],
+    });
+
+    const select = queries.find((q) => q.text.includes("LIMIT"))!;
+    expect(select.text).toContain('"status_batas"');
+    expect(select.text).toContain(
+      `to_char("edisi_geometri", 'YYYY-MM-DD') AS "edisi_geometri"`,
+    );
+  });
+
   it("rejects a requested property outside the fixed catalog", async () => {
     const { db } = createFakeDb(() => []);
     const repo = createOgcRepository(db);

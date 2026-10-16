@@ -23,6 +23,7 @@ export async function GET(
       SELECT
         d.kode_desa, d.nama_desa, d.tipe,
         d.jumlah_penduduk, d.pulau, d.jangkauan, d.area_km2,
+        d.status_batas, to_char(d.edisi_geometri, 'YYYY-MM-DD') AS edisi_geometri,
         kc.kode_kec, kc.nama_kecamatan,
         kb.kode_kab, kb.nama_kabupaten,
         p.kode_prov, p.nama_provinsi

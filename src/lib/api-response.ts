@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 interface ApiMeta {
   total?: number;
   source?: string;
+  snapshot?: string;
   attribution?: string;
   note?: string;
 }

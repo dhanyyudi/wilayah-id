@@ -280,6 +280,30 @@ describe("WFS DescribeFeatureType", () => {
     expect(byName.jumlah_penduduk).toBe("xs:integer");
   });
 
+  it("declares village boundary status and edition", async () => {
+    const response = await GET(
+      req("?service=WFS&request=DescribeFeatureType&typename=villages"),
+    );
+    const doc = await parseXml(response);
+    const schema = doc["xs:schema"];
+    const complexTypes = Array.isArray(schema["xs:complexType"])
+      ? schema["xs:complexType"]
+      : [schema["xs:complexType"]];
+    const featureType = complexTypes.find(
+      (ct: ParsedXml) => ct["@_name"] === "villagesType",
+    );
+    const elements =
+      featureType["xs:complexContent"]["xs:extension"]["xs:sequence"]["xs:element"];
+    const byName = Object.fromEntries(
+      (Array.isArray(elements) ? elements : [elements]).map((el: ParsedXml) => [
+        el["@_name"],
+        el["@_type"],
+      ]),
+    );
+    expect(byName.status_batas).toBe("xs:string");
+    expect(byName.edisi_geometri).toBe("xs:date");
+  });
+
   it("declares a substitutable element per requested type", async () => {
     const response = await GET(
       req(

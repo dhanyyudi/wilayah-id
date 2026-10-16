@@ -13,7 +13,12 @@
 import { create } from "xmlbuilder2";
 import type { Geometry } from "geojson";
 import { getDb, type DbQueryFunction } from "../db";
-import { COLLECTION_IDS, findCollection, type CollectionId } from "./catalog";
+import {
+  COLLECTION_IDS,
+  findCollection,
+  selectColumnSql,
+  type CollectionId,
+} from "./catalog";
 import { invalidParameterValue, sanitizedStoreError } from "./errors";
 import type { Bbox } from "./params";
 import {
@@ -157,7 +162,7 @@ export async function queryFeaturesAtPoint(
       `Unknown layer "${id}"; available layers: ${COLLECTION_IDS.join(", ")}`,
     );
   }
-  const columns = definition.propertyColumns.map(quoteIdentifier).join(", ");
+  const columns = definition.propertyColumns.map(selectColumnSql).join(", ");
   const text =
     `SELECT ${columns} FROM ${quoteIdentifier(definition.table)}` +
     ` WHERE ST_Covers(${quoteIdentifier(definition.geometryColumn)}, ST_SetSRID(ST_MakePoint($1, $2), 4326))` +

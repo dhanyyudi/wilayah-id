@@ -14,6 +14,7 @@ import {
   ExternalLink, AlertCircle
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { DATA_SOURCES } from "@/lib/provenance";
 
 function CodeBlock({ title, children, showLineNumbers = false }: { 
   title: string; 
@@ -550,7 +551,8 @@ NEXT_PUBLIC_TILES_BASE_URL=/tiles
             </p>
             <ul className="space-y-1.5">
               {[
-                { name: "Batas Administrasi (Kemendagri)", url: "https://gis.dukcapil.kemendagri.go.id/peta/", desc: "Official boundary shapes from Kemendagri (2024)" },
+                { name: "Batas Wilayah (BIG)", url: DATA_SOURCES.geometry.url, desc: `Boundary geometry from Badan Informasi Geospasial, BATASWILAYAH edition ${DATA_SOURCES.geometry.edition}` },
+                { name: "Data Penduduk (Dukcapil)", url: DATA_SOURCES.demographics.url, desc: `Population and household counts from Ditjen Dukcapil Kemendagri (${DATA_SOURCES.demographics.edition})` },
                 { name: "Kode Wilayah (Kemendagri)", url: "https://github.com/lokabisa-oss/region-id", desc: "Region codes from Ministry of Home Affairs" },
                 { name: "Kode Pos (Pos Indonesia)", url: "https://github.com/lokabisa-oss/postal-code-id", desc: "Postal codes from Pos Indonesia" },
               ].map((source) => (

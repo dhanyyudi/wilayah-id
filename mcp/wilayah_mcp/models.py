@@ -7,6 +7,8 @@ from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, Field, model_validator
 
+from .provenance import DATASET_SNAPSHOT
+
 DataT = TypeVar("DataT")
 
 
@@ -49,7 +51,7 @@ class ProvenanceRecord(BaseModel):
 class ResponseMeta(BaseModel):
     tool_version: str = "1.0.0"
     dataset_id: str = "wilayah-id"
-    snapshot: str = "dukcapil-2024-s1+kepmendagri-2025"
+    snapshot: str = DATASET_SNAPSHOT
     crs: str = "EPSG:4326"
     operation: str
     method: str = "postgis"
@@ -83,7 +85,7 @@ class SpatialResult:
     data: Any
     operation: str
     dataset_id: str = "wilayah-id"
-    snapshot: str = "dukcapil-2024-s1+kepmendagri-2025"
+    snapshot: str = DATASET_SNAPSHOT
     crs: str = "EPSG:4326"
     method: str = "postgis"
     provenance: list[ProvenanceRecord] = field(default_factory=list)

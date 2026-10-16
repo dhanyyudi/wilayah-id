@@ -104,11 +104,28 @@ export const COLLECTIONS: Record<CollectionId, CollectionDefinition> = {
       "jumlah_penduduk",
       "pulau",
       "jangkauan",
+      "status_batas",
+      "edisi_geometri",
     ],
   },
 };
 
 export const COLLECTION_IDS = Object.keys(COLLECTIONS) as CollectionId[];
+
+/** Property columns stored as PostgreSQL `date`. */
+export const DATE_COLUMNS: ReadonlySet<string> = new Set(["edisi_geometri"]);
+
+/**
+ * Select-list entry for one catalog column. Date columns are formatted as
+ * `YYYY-MM-DD` in SQL so the driver never turns them into time-zone
+ * shifted Date objects.
+ */
+export function selectColumnSql(column: string): string {
+  const quoted = `"${column}"`;
+  return DATE_COLUMNS.has(column)
+    ? `to_char(${quoted}, 'YYYY-MM-DD') AS ${quoted}`
+    : quoted;
+}
 
 /**
  * Looks up a collection definition by id. Returns null for unknown ids.

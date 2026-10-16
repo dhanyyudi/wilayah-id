@@ -1,6 +1,6 @@
 # 🇮🇩 wilayah-id — API Batas Administrasi Indonesia
 
-REST API & Webmap interaktif untuk batas administrasi Indonesia: **38 provinsi, 514 kabupaten/kota, 7.285 kecamatan, 83.762 desa/kelurahan**.
+REST API & Webmap interaktif untuk batas administrasi Indonesia: **38 provinsi, 514 kabupaten/kota, 7.282 kecamatan, 83.529 desa/kelurahan**.
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![MapLibre GL](https://img.shields.io/badge/MapLibre_GL-v5-blue)
@@ -15,7 +15,7 @@ REST API & Webmap interaktif untuk batas administrasi Indonesia: **38 provinsi, 
 - **OGC Compliant** — WMS 1.3.0 (GetCapabilities, GetMap, GetFeatureInfo) + WFS 2.0 (GetFeature, DescribeFeatureType)
 - **MCP Server** — Integrasi langsung dengan Claude Desktop / Cursor Server via Model Context Protocol (FastMCP)
 - **PostGIS** — Full geometry data (MultiPolygon) untuk semua level administrasi
-- **Open Source** — Data Batas Administrasi dari [Ditjen Dukcapil Kemendagri (2024)](https://gis.dukcapil.kemendagri.go.id/peta/)
+- **Open Source** — Geometri batas dari [Badan Informasi Geospasial (BIG), BATASWILAYAH edisi 2026-06-12](https://geoservices.big.go.id/rbi/rest/services/BATASWILAYAH), nama wilayah Kepmendagri 2025, data penduduk [Ditjen Dukcapil Kemendagri (2024 S1)](https://gis.dukcapil.kemendagri.go.id/peta/)
 
 ## 🌐 Layanan Publik
 
@@ -194,6 +194,15 @@ Regional and OGC API base URL: `/api/v1`. The health endpoint remains
 |--------|----------|-------------|
 | GET | `/boundaries/reverse?lat=&lng=&level=` | Koordinat → wilayah |
 
+### Status batas desa
+
+Respons desa/kelurahan di REST (`/regions/villages`, `/boundaries/villages`,
+`/boundaries/reverse`), OGC (`villages`) dan MCP (layer `village`) memuat
+`status_batas` dan `edisi_geometri` dari BIG BATASWILAYAH. Sebagian besar
+batas desa BIG berstatus `Batas Indikatif`, bukan batas definitif; jangan
+memakainya sebagai dasar hukum batas. `edisi_geometri` berformat
+`YYYY-MM-DD`. Fitur GeoJSON batas membawa `source` geometri per fitur.
+
 ### OGC Services
 
 Empat koleksi tetap tersedia di semua protokol OGC: `provinces`,
@@ -327,11 +336,12 @@ pencabutan key, dan token proxy dijelaskan di
 
 ```json
 {
-  "status": "success",
-  "data": { ... },
+  "data": [ ... ],
   "meta": {
     "total": 38,
-    "source": "region-id v1.0.2 (lokabisa-oss)"
+    "source": "BIG BATASWILAYAH 2026-06-12; names Kepmendagri 2025; population Dukcapil 2024 Semester 1",
+    "snapshot": "big-2026-06-12+kepmendagri-2025+dukcapil-2024-s1",
+    "attribution": "Badan Informasi Geospasial (BIG); Kemendagri; Ditjen Dukcapil Kemendagri"
   }
 }
 ```
@@ -344,8 +354,8 @@ pencabutan key, dan token proxy dijelaskan di
 |-------|-----------|----------|
 | `provinsi` | z3–9 | 38 |
 | `kabupaten` | z7–11 | 514 |
-| `kecamatan` | z10–12 | 7.285 |
-| `desa` | z12–14 | 83.762 |
+| `kecamatan` | z10–12 | 7.282 |
+| `desa` | z12–14 | 83.529 |
 
 ## 🤖 Model Context Protocol (MCP)
 
@@ -395,10 +405,13 @@ Konfigurasi dapat diubah melalui `MCP_DB_POOL_MIN`, `MCP_DB_POOL_MAX`,
 `MCP_MAX_ARTIFACT_BYTES`, dan `MCP_PUBLIC_BASE_URL`. GeoPackage membutuhkan GDAL
 `ogr2ogr`, yang sudah disertakan dalam image MCP.
 
-Snapshot eksperimen yang dikunci untuk baseline MCP adalah geometri batas
-Dukcapil 2024 Semester 1, kode wilayah turunan Kepmendagri 2025, dan data kode
-pos sebagaimana tercantum pada tabel sumber data di bawah. Perbedaan versi
-geometri dan kode harus direkonsiliasi saat membangun ground truth.
+Setiap respons MCP menyebut snapshot
+`big-2026-06-12+kepmendagri-2025+dukcapil-2024-s1`: geometri BIG
+BATASWILAYAH edisi 2026-06-12, nama dan kode wilayah Kepmendagri 2025, dan
+data penduduk Dukcapil 2024 Semester 1. Sumber per komponen tercatat di tabel
+`dataset_snapshot` dan di tabel sumber data di bawah. Baseline eksperimen
+lama (Dukcapil 2024 Semester 1) tetap tercatat di
+`mcp/tests/baseline/data_snapshot.json`.
 
 Untuk menjalankan test kontrak dan service:
 
@@ -482,7 +495,8 @@ diaktifkan tanpa autentikasi atau pembatasan trafik yang sesuai.
 
 | Dataset | Source | Records |
 |---------|--------|---------|
-| Admin boundaries (SHP) | [Ditjen Dukcapil Kemendagri (2024)](https://gis.dukcapil.kemendagri.go.id/peta/) | 38 + 514 + 7.285 + 83.762 |
+| Boundary geometry | [Badan Informasi Geospasial (BIG), BATASWILAYAH](https://geoservices.big.go.id/rbi/rest/services/BATASWILAYAH) edition 2026-06-12. Desa and kecamatan at 1:10.000; kab/kota and provinsi are dissolved from the kecamatan coverage (see `docs/BIG_2026_MIGRATION.md`) | 38 + 514 + 7.282 + 83.529 |
+| Population, households, official area | [Ditjen Dukcapil Kemendagri](https://gis.dukcapil.kemendagri.go.id/peta/) 2024 Semester 1, joined by region code | |
 | Region codes | [region-id v1.0.2](https://github.com/lokabisa-oss/region-id/releases/tag/v1.0.2) (Kepmendagri 2025), with local name fixes in `data-region-id/name-corrections.csv` | 91.248 |
 | Postal codes | [postal-code-id](https://github.com/nicnocquee/postal-code-id) | 77.721 |
 
@@ -511,4 +525,7 @@ diaktifkan tanpa autentikasi atau pembatasan trafik yang sesuai.
 
 ## 📄 License
 
-MIT
+Kode: MIT. Geometri batas bersumber dari Badan Informasi Geospasial (BIG),
+BATASWILAYAH edisi 2026-06-12, dan tunduk pada ketentuan BIG; cantumkan
+atribusi BIG saat memakai atau mendistribusikan ulang geometri. Nama wilayah:
+Kepmendagri 2025. Data penduduk: Ditjen Dukcapil Kemendagri 2024 Semester 1.
